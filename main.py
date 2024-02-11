@@ -114,19 +114,18 @@ class LatticeCreator:
     #             return False
     #     return True
 
-    def isbordercheck_cube(self, x, y, z, cx, cy, cz, a):
-        '''Определаяем, граничит ли внешний узел с границей куба (внутренним узлом)
-        хотя бы по одной своей координате;
-        определяем по его координатам и координатам центра куба и его размеру
-        True, если узел граничит с кубом'''
-        ans1 = self.isoutcheck_cube(x + self.incr[0], y, z, cx, cy, cz, a)
-        ans2 = self.isoutcheck_cube(x - self.incr[0], y, z, cx, cy, cz, a)
-        ans3 = self.isoutcheck_cube(x, y + self.incr[1], z, cx, cy, cz, a)
-        ans4 = self.isoutcheck_cube(x, y - self.incr[1], z, cx, cy, cz, a)
-        ans5 = self.isoutcheck_cube(x, y, z + self.incr[2], cx, cy, cz, a)
-        ans6 = self.isoutcheck_cube(x, y, z - self.incr[2], cx, cy, cz, a)
-        return ans1 or ans2 or ans3 or ans4 or ans5 or ans6
-        # return x + self.incr[0]> abs(cx)
+    # def isbordercheck_cube(self, x, y, z, cx, cy, cz, a):
+    #     '''Определаяем, граничит ли внешний узел с границей куба (внутренним узлом)
+    #     хотя бы по одной своей координате;
+    #     определяем по его координатам и координатам центра куба и его размеру
+    #     True, если узел граничит с кубом'''
+    #     ans1 = self.isoutcheck_cube(x + self.incr[0], y, z, cx, cy, cz, a)
+    #     ans2 = self.isoutcheck_cube(x - self.incr[0], y, z, cx, cy, cz, a)
+    #     ans3 = self.isoutcheck_cube(x, y + self.incr[1], z, cx, cy, cz, a)
+    #     ans4 = self.isoutcheck_cube(x, y - self.incr[1], z, cx, cy, cz, a)
+    #     ans5 = self.isoutcheck_cube(x, y, z + self.incr[2], cx, cy, cz, a)
+    #     ans6 = self.isoutcheck_cube(x, y, z - self.incr[2], cx, cy, cz, a)
+    #     return ans1 or ans2 or ans3 or ans4 or ans5 or ans6
 
     def create_outfile(self):
         '''Вызываем все функции, делаем вычисления и записываем в файл'''
@@ -183,47 +182,47 @@ class LatticeCreator:
                                         num_in[0] += 1
                                         # if self.isnewnode(x, y, z):
                                         #     self.border[0].append((x, y, z))
-                                        self.border[0].append((x, y, z))
+                                        # self.border[0].append((x, y, z))
                                     elif (x + self.incr[0]) > (self.cube_centre[0] + self.cube_size / 2):
                                         num_in[1] += 1
                                         # if self.isnewnode(x, y, z):
                                         #     self.border[1].append((x, y, z))
-                                        self.border[1].append((x, y, z))
+                                        # self.border[1].append((x, y, z))
                                     elif (y - self.incr[1]) < (self.cube_centre[1] - self.cube_size / 2):
                                         num_in[2] += 1
                                         # if self.isnewnode(x, y, z):
                                         #     self.border[2].append((x, y, z))
-                                        self.border[2].append((x, y, z))
+                                        # self.border[2].append((x, y, z))
                                     elif (y + self.incr[1]) > (self.cube_centre[1] + self.cube_size / 2):
                                         num_in[3] += 1
                                         # if self.isnewnode(x, y, z):
                                         #     self.border[3].append((x, y, z))
-                                        self.border[3].append((x, y, z))
+                                        # self.border[3].append((x, y, z))
                                     elif (z - self.incr[2]) < (self.cube_centre[2] - self.cube_size / 2):
                                         num_in[4] += 1
                                         # if self.isnewnode(x, y, z):
                                         #     self.border[4].append((x, y, z))
-                                        self.border[4].append((x, y, z))
+                                        # self.border[4].append((x, y, z))
                                     elif (z + self.incr[2]) > (self.cube_centre[2] + self.cube_size / 2):
                                         num_in[5] += 1
                                         # if self.isnewnode(x, y, z):
                                         #     self.border[5].append((x, y, z))
-                                        self.border[5].append((x, y, z))
+                                        # self.border[5].append((x, y, z))
                                     # Количество внутренних узлов записываем:
                         file.write(f'{num_out}')
                         for i in range(6):
                             file.write(f';{num_in[i]}')
-                        for i in range(6):
-                            print(len(self.border[i]))
-                            print(self.border[i])
+                        # for i in range(6):
+                        #     print(len(self.border[i]))
+                        #     print(self.border[i])
 
                     case 4:  # параллелепипед
                         pass
 
                 match self.border_type:  # и далее всё одинаково:
-                    # id; i; j; k; 26 * расстояний (между чем? От узла до границы, в пределах одного узла) по
-                    # направлению (позже); вектор нормали к ближайшей границе (что это и как считается?);
-                    # расстояние до ближайшей границы (по вектору нормали?да)
+                    # id; i; j; k; 26 * расстояний (от узла до границы, в пределах одного узла) по
+                    # 26 заданным направлениям; вектор нормали к ближайшей границе (единичный);
+                    # расстояние до ближайшей границы (по вектору нормали будет)
                     # идентификатор узла определяется id = i + (j + k * Ny) *Nx,
                     # сначала список узлов внутренних, потом по очереди всех границ
                     case 0:  # произвольная граница с заданием по точкам/аналитически
