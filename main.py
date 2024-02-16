@@ -1,4 +1,4 @@
-from itertools import chain
+# from itertools import chain
 
 
 class LatticeCreator:
@@ -12,7 +12,7 @@ class LatticeCreator:
         self.path_out = path_out
 
     def get_input(self):
-        '''достаём все параметры из входного файла'''
+        """достаём все параметры из входного файла"""
         try:
             with open(self.path_in, encoding='utf-8') as file:
                 lines = file.readlines()
@@ -44,13 +44,13 @@ class LatticeCreator:
                         print('куб: ', self.cube_centre, self.cube_size)
                     case 4:  # параллелепипед
                         pass
-                self.create_nods_xyz()
         except:
             print('Неверный формат входного файла')
 
-    def create_nods_xyz(self):
-        '''Создаём список (по осям) списков координат всех узлов
-        решётки для дальнейших проверок и вычислений'''
+    def count_nods_xyz(self):
+        """Создаём список (по осям) списков координат всех узлов
+        решётки для дальнейших проверок и вычислений
+        КОРРЕКТИРОВКА: упростил пока временно до вычисления количества узлов по всем осям"""
         self.num_of_nodes = []
         for n in range(6):  # вычисляем и складываем количество узлов
             # по разные стороны центра фигуры границы, для каждой оси.
@@ -66,44 +66,47 @@ class LatticeCreator:
                 self.num_of_nodes.append(
                     int(abs((self.minmaxcoord[n] - self.figure_centre[n // 2]) / self.incr[n // 2])))
         # print(self.num_of_nodes)
-        a = chain(range(self.num_of_nodes[0] * (-1), 0), range(self.num_of_nodes[1] + 1))
-        b = chain(range(self.num_of_nodes[2] * (-1), 0), range(self.num_of_nodes[3] + 1))
-        c = chain(range(self.num_of_nodes[4] * (-1), 0), range(self.num_of_nodes[5] + 1))
-        # print(a, b, c, sep='\n')
-        self.nods_xyz = [[], [], []]
-        for nx in a:
-            self.nods_xyz[0].append(nx * self.incr[0] + self.figure_centre[0])
-        for ny in b:
-            self.nods_xyz[1].append(ny * self.incr[1] + self.figure_centre[1])
-        for nz in c:
-            self.nods_xyz[2].append(nz * self.incr[2] + self.figure_centre[2])
-        return self.nods_xyz
+        # a = chain(range(self.num_of_nodes[0] * (-1), 0), range(self.num_of_nodes[1] + 1))
+        # b = chain(range(self.num_of_nodes[2] * (-1), 0), range(self.num_of_nodes[3] + 1))
+        # c = chain(range(self.num_of_nodes[4] * (-1), 0), range(self.num_of_nodes[5] + 1))
+        # # print(a, b, c, sep='\n')
+        # self.nods_xyz = [[], [], []]
+        # for nx in a:
+        #     self.nods_xyz[0].append(nx * self.incr[0] + self.figure_centre[0])
+        # for ny in b:
+        #     self.nods_xyz[1].append(ny * self.incr[1] + self.figure_centre[1])
+        # for nz in c:
+        #     self.nods_xyz[2].append(nz * self.incr[2] + self.figure_centre[2])
+        self.Nx = self.num_of_nodes[0] + self.num_of_nodes[1] + 1  # len(self.nods_xyz[0])
+        self.Ny = self.num_of_nodes[2] + self.num_of_nodes[3] + 1  # len(self.nods_xyz[1])
+        self.Nz = self.num_of_nodes[4] + self.num_of_nodes[5] + 1  # len(self.nods_xyz[2])
+        # return self.nods_xyz
 
     @staticmethod
-    def isoutcheck_sphere(x, y, z, cx, cy, cz, r):
-        ''' определаяем внешний/внутренний ли узел по
+    def isincheck_sphere(x, y, z, cx, cy, cz, r):
+        """ определаяем внешний/внутренний ли узел по
         его координатам и координатам центра сферы и её радиуса
-        True, если узел внутренний (за пределами границы, внутри расчётной области)'''
+        True, если узел внутренний (за пределами границы, внутри расчётной области)"""
         return ((x - cx) ** 2 + (y - cy) ** 2 + (z - cz) ** 2) ** 0.5 >= r
 
     def isbordercheck_sphere(self, x, y, z, cx, cy, cz, r):
-        '''Определаяем, граничит ли внешний узел с границей сферы (внутренним узлом)
+        """Определаяем, граничит ли внешний узел с границей сферы (а значит с внутренним узлом)
         хотя бы по одной своей координате; определяем по его координатам и координатам
         центра сферы и её радиуса
-        True, если узел граничит со сферой'''
-        ans1 = self.isoutcheck_sphere(x + self.incr[0], y, z, cx, cy, cz, r)
-        ans2 = self.isoutcheck_sphere(x - self.incr[0], y, z, cx, cy, cz, r)
-        ans3 = self.isoutcheck_sphere(x, y + self.incr[1], z, cx, cy, cz, r)
-        ans4 = self.isoutcheck_sphere(x, y - self.incr[1], z, cx, cy, cz, r)
-        ans5 = self.isoutcheck_sphere(x, y, z + self.incr[2], cx, cy, cz, r)
-        ans6 = self.isoutcheck_sphere(x, y, z - self.incr[2], cx, cy, cz, r)
+        True, если узел граничит со сферой"""
+        ans1 = self.isincheck_sphere(x + self.incr[0], y, z, cx, cy, cz, r)
+        ans2 = self.isincheck_sphere(x - self.incr[0], y, z, cx, cy, cz, r)
+        ans3 = self.isincheck_sphere(x, y + self.incr[1], z, cx, cy, cz, r)
+        ans4 = self.isincheck_sphere(x, y - self.incr[1], z, cx, cy, cz, r)
+        ans5 = self.isincheck_sphere(x, y, z + self.incr[2], cx, cy, cz, r)
+        ans6 = self.isincheck_sphere(x, y, z - self.incr[2], cx, cy, cz, r)
         return ans1 or ans2 or ans3 or ans4 or ans5 or ans6
 
     @staticmethod
-    def isoutcheck_cube(x, y, z, cx, cy, cz, a):
-        ''' определаяем внутренний/внешний ли узел по
+    def isincheck_cube(x, y, z, cx, cy, cz, a):
+        """ определаяем внутренний/внешний ли узел по
         его координатам и координатам центра куба и размеру его грани
-        True, если узел внутренний (за пределами границы, внутри расчётной области)'''
+        True, если узел внутренний (за пределами границы, внутри расчётной области)"""
         return abs(x - cx) >= a / 2 or abs(y - cy) >= a / 2 or abs(z - cz) >= a / 2
 
     # def isnewnode(self, x, y, z):
@@ -128,93 +131,98 @@ class LatticeCreator:
     #     return ans1 or ans2 or ans3 or ans4 or ans5 or ans6
 
     def create_outfile(self):
-        '''Вызываем все функции, делаем вычисления и записываем в файл'''
+        """Вызываем все функции, делаем вычисления и записываем в файл"""
         self.get_input()
-        self.create_nods_xyz()
+        self.count_nods_xyz()
+        self.x_min = self.figure_centre[0] - self.num_of_nodes[0] * self.incr[0]
+        self.y_min = self.figure_centre[1] - self.num_of_nodes[2] * self.incr[1]
+        self.z_min = self.figure_centre[2] - self.num_of_nodes[4] * self.incr[2]
         try:
             with open(self.path_out, "w") as file:
                 file.write(
-                    f'{self.nods_xyz[0][0]};{self.nods_xyz[1][0]};{self.nods_xyz[2][0]}\n')  # координаты
+                    f'{self.x_min};{self.y_min};{self.z_min}\n')  # координаты
                 # левого нижнего узла решётки (минимальные координаты узла по каждому направлению
                 # из Ox, Oy, Oz)
 
                 file.write(f'{self.incr[0]};{self.incr[1]};{self.incr[2]}\n')  # шаг решётки по каждому
                 # направлению
-
-                file.write(f'{len(self.nods_xyz[0])};{len(self.nods_xyz[1])};{len(self.nods_xyz[2])}\n')
+                file.write(f'{self.Nx};{self.Ny};{self.Nz}\n')
                 # количество узлов по каждой оси
 
                 match self.border_type:  # Количество внутренних узлов, и далее через ; количество узлов
                     # для каждой из границ расчётной области
+                    # ТАКЖЕ в этом блоке сохраняются все внешние и граничные узлы в виде списка кортежей их координат,
+                    # и распределяются по этим группам
                     case 0:  # произвольная граница с заданием по точкам/аналитически
                         pass
 
                     case 1:  # сфера
-                        num_out = 0
-                        num_in = 0
-                        for x in self.nods_xyz[0]:
-                            for y in self.nods_xyz[1]:
-                                for z in self.nods_xyz[2]:
-                                    if self.isoutcheck_sphere(x, y, z, self.sphere_centre[0], self.sphere_centre[1],
-                                                              self.sphere_centre[2], self.sphere_r):
-                                        num_out += 1
+                        nums = [0, 0]
+                        self.nods_to_write = [[], []]
+                        for i in range(self.Nx + 1):
+                            x = self.x_min + i * self.incr[0]
+                            for j in range(self.Ny + 1):
+                                y = self.y_min + j * self.incr[1]
+                                for k in range(self.Nz + 1):
+                                    z = self.z_min + k * self.incr[2]
+                                    if self.isincheck_sphere(x, y, z, self.sphere_centre[0], self.sphere_centre[1],
+                                                             self.sphere_centre[2], self.sphere_r):
+                                        nums[0] += 1
+                                        self.nods_to_write[0].append((i, j, k))
                                     elif self.isbordercheck_sphere(x, y, z, self.sphere_centre[0],
                                                                    self.sphere_centre[1],
                                                                    self.sphere_centre[2], self.sphere_r):
-                                        num_in += 1
-                        # Количество внутренних узлов записываем:
-                        file.write(f'{num_out};{num_in}')
+                                        nums[1] += 1
+                                        self.nods_to_write[1].append((i, j, k))
+                        # Количество внутренних узлов записываем и количество внешних граничных узлов:
+                        file.write(f'{nums[0]};{nums[1]}\n')
+                        # print(self.nods_to_write)
 
                     case 2:  # эллипсоид
                         pass
 
                     case 3:  # куб
-                        num_out = 0
-                        num_in = [0, 0, 0, 0, 0, 0]
-                        self.border = [[] for _ in range(6)]
-                        for x in self.nods_xyz[0]:
-                            for y in self.nods_xyz[1]:
-                                for z in self.nods_xyz[2]:
-                                    if self.isoutcheck_cube(x, y, z, self.cube_centre[0], self.cube_centre[1],
-                                                            self.cube_centre[2], self.cube_size):
-                                        num_out += 1
+                        nums = [0, 0, 0, 0, 0, 0, 0]
+                        self.nods_to_write = [[] for _ in range(7)]
+                        for i in range(self.Nx + 1):
+                            x = self.x_min + i * self.incr[0]
+                            for j in range(self.Ny + 1):
+                                y = self.y_min + j * self.incr[1]
+                                for k in range(self.Nz + 1):
+                                    z = self.z_min + k * self.incr[2]
+                                    if self.isincheck_cube(x, y, z, self.cube_centre[0], self.cube_centre[1],
+                                                           self.cube_centre[2], self.cube_size):
+                                        nums[0] += 1
+                                        self.nods_to_write[0].append((i, j, k))
                                     elif (x - self.incr[0]) < (self.cube_centre[0] - self.cube_size / 2):
-                                        num_in[0] += 1
+                                        nums[1] += 1
                                         # if self.isnewnode(x, y, z):
                                         #     self.border[0].append((x, y, z))
-                                        # self.border[0].append((x, y, z))
+                                        self.nods_to_write[1].append((i, j, k))
                                     elif (x + self.incr[0]) > (self.cube_centre[0] + self.cube_size / 2):
-                                        num_in[1] += 1
-                                        # if self.isnewnode(x, y, z):
-                                        #     self.border[1].append((x, y, z))
-                                        # self.border[1].append((x, y, z))
+                                        nums[2] += 1
+                                        self.nods_to_write[2].append((i, j, k))
                                     elif (y - self.incr[1]) < (self.cube_centre[1] - self.cube_size / 2):
-                                        num_in[2] += 1
-                                        # if self.isnewnode(x, y, z):
-                                        #     self.border[2].append((x, y, z))
-                                        # self.border[2].append((x, y, z))
+                                        nums[3] += 1
+                                        self.nods_to_write[3].append((i, j, k))
                                     elif (y + self.incr[1]) > (self.cube_centre[1] + self.cube_size / 2):
-                                        num_in[3] += 1
-                                        # if self.isnewnode(x, y, z):
-                                        #     self.border[3].append((x, y, z))
-                                        # self.border[3].append((x, y, z))
+                                        nums[4] += 1
+                                        self.nods_to_write[4].append((i, j, k))
                                     elif (z - self.incr[2]) < (self.cube_centre[2] - self.cube_size / 2):
-                                        num_in[4] += 1
-                                        # if self.isnewnode(x, y, z):
-                                        #     self.border[4].append((x, y, z))
-                                        # self.border[4].append((x, y, z))
+                                        nums[5] += 1
+                                        self.nods_to_write[5].append((i, j, k))
                                     elif (z + self.incr[2]) > (self.cube_centre[2] + self.cube_size / 2):
-                                        num_in[5] += 1
-                                        # if self.isnewnode(x, y, z):
-                                        #     self.border[5].append((x, y, z))
-                                        # self.border[5].append((x, y, z))
-                                    # Количество внутренних узлов записываем:
-                        file.write(f'{num_out}')
-                        for i in range(6):
-                            file.write(f';{num_in[i]}')
+                                        nums[6] += 1
+                                        self.nods_to_write[6].append((i, j, k))
+                        # Количество внутренних узлов записываем:
+                        file.write(f'{nums[0]}')
+                        # и количество внешних граничных узлов записываем:
+                        for i in range(1, 7):
+                            file.write(f';{nums[i]}')
+                        file.write('\n')
                         # for i in range(6):
-                        #     print(len(self.border[i]))
-                        #     print(self.border[i])
+                        #     print(len(self.nods_to_write[i]))
+                        # print(self.border[i])
 
                     case 4:  # параллелепипед
                         pass
@@ -228,11 +236,21 @@ class LatticeCreator:
                     case 0:  # произвольная граница с заданием по точкам/аналитически
                         pass
                     case 1:  # сфера
-                        pass
+                        for n in range(2):
+                            # сначала для внутренних узлов считаем и записываем (n=0), затем для границы (n=1):
+                            for a in self.nods_to_write[n]:
+                                id_ = a[0] + (a[1] + a[2] * self.Ny) * self.Nx
+                                file.write(f'{id_};{a[0]};{a[1]};{a[2]}\n')
+
+                        # теперь для граничных узлов считаем и записываем:
                     case 2:  # эллипсоид
                         pass
                     case 3:  # куб
-                        pass
+                        for n in range(7):
+                            # сначала для внутренних узлов считаем и записываем (n=0), затем для всех 6 границ (n>=1):
+                            for a in self.nods_to_write[n]:
+                                id_ = a[0] + (a[1] + a[2] * self.Ny) * self.Nx
+                                file.write(f'{id_};{a[0]};{a[1]};{a[2]}\n')
                     case 4:  # параллелепипед
                         pass
 
