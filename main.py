@@ -1,11 +1,8 @@
-# from itertools import chain
-
-
 class LatticeCreator:
-    BASIS = [[1, 0, 0], [-1, 0, 0], [0, 1, 0], [0, -1, 0], [0, 0, 1], [0, 0, -1], [1, 1, 0], [-1, 1, 0], [1, -1, 0],
-             [-1, -1, 0],
-             [1, 0, 1], [-1, 0, 1], [1, 0, -1], [-1, 0, -1], [0, 1, 1], [0, -1, 1], [0, 1, -1], [0, -1, -1],
-             [1, 1, 1], [-1, 1, 1], [1, -1, 1], [-1, -1, 1], [1, 1, -1], [-1, 1, -1], [1, -1, -1], [-1, -1, -1]]
+    BASIS = ((1, 0, 0), (-1, 0, 0), (0, 1, 0), (0, -1, 0), (0, 0, 1), (0, 0, -1), (1, 1, 0), (-1, 1, 0), (1, -1, 0),
+             (-1, -1, 0), (1, 0, 1), (-1, 0, 1), (1, 0, -1), (-1, 0, -1), (0, 1, 1), (0, -1, 1), (0, 1, -1),
+             (0, -1, -1), (1, 1, 1), (-1, 1, 1), (1, -1, 1), (-1, -1, 1), (1, 1, -1), (-1, 1, -1), (1, -1, -1),
+             (-1, -1, -1))
 
     def __init__(self, path_in='input.txt', path_out='output.txt'):
         self.path_in = path_in
@@ -22,7 +19,6 @@ class LatticeCreator:
                 self.incr = tuple(map(float, lines[1].split(';')))  # шаги решётки по осям координат
                 print('шаги решётки по осям координат: ', self.incr)
                 self.border_type = int(lines[2].strip())  # тип фигуры для задания границы
-                # print(self.border_type, type(self.border_type))
 
                 self.figure_centre = [0, 0, 0]
                 match self.border_type:  # вытаскиваем параметры для каждого типа фигуры
@@ -58,29 +54,15 @@ class LatticeCreator:
             # и откладывается от него до границ области вычислений.
             # При этом если шаги узлов решётки кратны расстояниям, получаем много узлов решётки,
             # расположенных ровно в границе области вычислений! Уточнить нормально ли это!!!!!
-            # print(n % 2, end=' ')
             if not n % 2:
                 self.num_of_nodes.append(
                     int(abs((self.minmaxcoord[n] - self.figure_centre[n // 2]) / self.incr[n // 2])))
             else:
                 self.num_of_nodes.append(
                     int(abs((self.minmaxcoord[n] - self.figure_centre[n // 2]) / self.incr[n // 2])))
-        # print(self.num_of_nodes)
-        # a = chain(range(self.num_of_nodes[0] * (-1), 0), range(self.num_of_nodes[1] + 1))
-        # b = chain(range(self.num_of_nodes[2] * (-1), 0), range(self.num_of_nodes[3] + 1))
-        # c = chain(range(self.num_of_nodes[4] * (-1), 0), range(self.num_of_nodes[5] + 1))
-        # # print(a, b, c, sep='\n')
-        # self.nods_xyz = [[], [], []]
-        # for nx in a:
-        #     self.nods_xyz[0].append(nx * self.incr[0] + self.figure_centre[0])
-        # for ny in b:
-        #     self.nods_xyz[1].append(ny * self.incr[1] + self.figure_centre[1])
-        # for nz in c:
-        #     self.nods_xyz[2].append(nz * self.incr[2] + self.figure_centre[2])
-        self.Nx = self.num_of_nodes[0] + self.num_of_nodes[1] + 1  # len(self.nods_xyz[0])
-        self.Ny = self.num_of_nodes[2] + self.num_of_nodes[3] + 1  # len(self.nods_xyz[1])
-        self.Nz = self.num_of_nodes[4] + self.num_of_nodes[5] + 1  # len(self.nods_xyz[2])
-        # return self.nods_xyz
+        self.Nx = self.num_of_nodes[0] + self.num_of_nodes[1] + 1
+        self.Ny = self.num_of_nodes[2] + self.num_of_nodes[3] + 1
+        self.Nz = self.num_of_nodes[4] + self.num_of_nodes[5] + 1
 
     @staticmethod
     def isincheck_sphere(x, y, z, cx, cy, cz, r):
@@ -94,13 +76,78 @@ class LatticeCreator:
         хотя бы по одной своей координате; определяем по его координатам и координатам
         центра сферы и её радиуса
         True, если узел граничит со сферой"""
-        ans1 = self.isincheck_sphere(x + self.incr[0], y, z, cx, cy, cz, r)
-        ans2 = self.isincheck_sphere(x - self.incr[0], y, z, cx, cy, cz, r)
-        ans3 = self.isincheck_sphere(x, y + self.incr[1], z, cx, cy, cz, r)
-        ans4 = self.isincheck_sphere(x, y - self.incr[1], z, cx, cy, cz, r)
-        ans5 = self.isincheck_sphere(x, y, z + self.incr[2], cx, cy, cz, r)
-        ans6 = self.isincheck_sphere(x, y, z - self.incr[2], cx, cy, cz, r)
-        return ans1 or ans2 or ans3 or ans4 or ans5 or ans6
+        ans = []
+        answer = False
+        for vector in self.BASIS:
+            ans.append(self.isincheck_sphere(x + self.incr[0] * vector[0], y + self.incr[1] * vector[1],
+                                             z + self.incr[2] * vector[2], cx, cy, cz, r))
+            answer = answer or ans[-1]
+        return answer
+
+    @staticmethod
+    def vect_sum(v1: tuple, v2: tuple) -> tuple:
+        """Возвращает сумму двух векторов"""
+        return v1[0] + v2[0], v1[1] + v2[1], v1[2] + v2[2]
+
+    @staticmethod
+    def vect_num_mult(n: float, v: tuple) -> tuple:
+        """Возвращает произведение вектора на число"""
+        return v[0] * n, v[1] * n, v[2] * n
+
+    @staticmethod
+    def vect_scalar_mult(v1: tuple, v2: tuple) -> float:
+        """Возвращает скалярное произведение векторов"""
+        return v1[0] * v2[0] + v1[1] * v2[1] + v1[2] * v2[2]
+
+    def nearbordercheck_sphere(self, o: tuple, u: tuple) -> float:
+        # o - координаты узла, u - базисный вектор
+        """Определаяем, граничит ли данный узел с границей сферы
+         в пределах и направлении заданного вектора (расстояние - в единицах шага решётки).
+        Возвращает 0, если узел не граничит в этом направлении, или лежит на границе (расстояние = 0).
+        Если граничит - возвращает расстояние (по направлению вектора)
+        в пределах расстояния между узлами в этом направлении."""
+        sph = self.sphere_centre  # координаты центра сферы
+        r = self.sphere_r  # радиус сферы
+        if ((o[0] - sph[0]) ** 2 + (o[1] - sph[1]) ** 2 + (o[2] - sph[2]) ** 2) ** 0.5 == r:
+            return 0
+
+        x1 = o[0] + u[0] * self.incr[0]
+        y1 = o[1] + u[1] * self.incr[1]
+        z1 = o[2] + u[2] * self.incr[2]
+
+        ans1 = self.isincheck_sphere(o[0], o[1], o[2], sph[0], sph[1], sph[2], r)
+        ans2 = self.isincheck_sphere(x1, y1, z1, sph[0], sph[1], sph[2], r)
+        if ans1 == ans2:  # если изначальная точка и ближайшая по базисному
+            # вектору - по одну сторону границы, то возвращаем 0
+            # if self.m < 1000: # для отлова ошибок принты
+            #     self.m += 1
+            # print('!!!!!!!!!!!!!!!!!!!!!!!!!!!!!'*ans1*ans2, end='')
+            # print(f'm={self.m}', ' ' * (4 - len(str(self.m))), f'o=', *o, ' ' * (48 - len(str(o))),
+            #       f' u={u} {ans1} {ans2}', ' ' * (18 - len(str(u))), f' x={x1} {y1} {z1}')
+            return 0
+
+        o_sph = self.vect_sum(o, self.vect_num_mult(-1, sph))
+        a = self.vect_scalar_mult(u, u)
+        b = 2 * self.vect_scalar_mult(u, o_sph)
+        c = self.vect_scalar_mult(o_sph, o_sph) - r ** 2
+        det = (b ** 2 - 4 * a * c)
+        if det >= 0:
+            d1 = (- b + det ** 0.5) / (2 * a)
+            d2 = (- b - det ** 0.5) / (2 * a)
+            # if self.m < 1000: # для отлова ошибок принты
+            #     self.m += 1
+            #     print(d1, f'd1 = {d1 * (a ** 0.5)}')
+            #     print(d2, f'd2 = {d2 * (a ** 0.5)}')
+            #     print(f'm={self.m}', ' ' * (4 - len(str(self.m))), f'o=', *o, ' ' * (48 - len(str(o))),
+            #           f' u={u} {ans1} {ans2}', ' ' * (18 - len(str(u))), f' x={x1} {y1} {z1}')
+            if d1 >= 0 and d2 >= 0:
+                return min(d1 * (a ** 0.5), d2 * (a ** 0.5))
+            elif d1 >= 0 or d2 >= 0:
+                return max(d1 * (a ** 0.5), d2 * (a ** 0.5))
+            else:
+                return 0
+        else:
+            return 0
 
     @staticmethod
     def isincheck_cube(x, y, z, cx, cy, cz, a):
@@ -109,26 +156,56 @@ class LatticeCreator:
         True, если узел внутренний (за пределами границы, внутри расчётной области)"""
         return abs(x - cx) >= a / 2 or abs(y - cy) >= a / 2 or abs(z - cz) >= a / 2
 
-    # def isnewnode(self, x, y, z):
-    #     '''Функция проверяет (на отсутствие в списке узлов) внешний узел
-    #     (узел кубической границы) для всех 6 границ расчётных областей куба'''
-    #     for i in range(6):
-    #         if (x, y, z) in self.border[i]:
-    #             return False
-    #     return True
-
     # def isbordercheck_cube(self, x, y, z, cx, cy, cz, a):
     #     '''Определаяем, граничит ли внешний узел с границей куба (внутренним узлом)
     #     хотя бы по одной своей координате;
     #     определяем по его координатам и координатам центра куба и его размеру
     #     True, если узел граничит с кубом'''
-    #     ans1 = self.isoutcheck_cube(x + self.incr[0], y, z, cx, cy, cz, a)
-    #     ans2 = self.isoutcheck_cube(x - self.incr[0], y, z, cx, cy, cz, a)
-    #     ans3 = self.isoutcheck_cube(x, y + self.incr[1], z, cx, cy, cz, a)
-    #     ans4 = self.isoutcheck_cube(x, y - self.incr[1], z, cx, cy, cz, a)
-    #     ans5 = self.isoutcheck_cube(x, y, z + self.incr[2], cx, cy, cz, a)
-    #     ans6 = self.isoutcheck_cube(x, y, z - self.incr[2], cx, cy, cz, a)
-    #     return ans1 or ans2 or ans3 or ans4 or ans5 or ans6
+    #     ans = []
+    #     answer = False
+    #     for vector in self.BASIS:
+    #         ans.append(self.isincheck_cube(x + self.incr[0] * vector[0], y + self.incr[1] * vector[1],
+    #                                        z + self.incr[2] * vector[2], cx, cy, cz, a))
+    #         answer = answer or ans[-1]
+    #     return answer
+
+    def nearbordercheck_cube(self, o: tuple, u: tuple) -> float:
+        # o - координаты узла, u - базисный вектор
+        """Определаяем, граничит ли данный узел с границей куба
+         в пределах и направлении заданного вектора (расстояние - в единицах шага решётки).
+        Возвращает 0, если узел не граничит в этом направлении, или лежит на границе (расстояние = 0).
+        Если граничит - возвращает расстояние (по направлению вектора)
+        в пределах расстояния между узлами в этом направлении."""
+        cb = self.cube_centre  # координаты центра куба
+        a = self.cube_size  # размер куба
+        if abs(o[0] - cb[0]) == a / 2 or abs(o[1] - cb[1]) == a / 2 or abs(o[2] - cb[2]) == a / 2:
+            return 0
+
+        x1 = o[0] + u[0] * self.incr[0]
+        y1 = o[1] + u[1] * self.incr[1]
+        z1 = o[2] + u[2] * self.incr[2]
+
+        ans1 = self.isincheck_cube(o[0], o[1], o[2], cb[0], cb[1], cb[2], a)
+        ans2 = self.isincheck_cube(x1, y1, z1, cb[0], cb[1], cb[2], a)
+        if ans1 == ans2:  # если изначальная точка и ближайшая по базисному
+            # вектору - по одну сторону границы, то возвращаем 0
+            # if self.m < 1000: # для отлова ошибок принты
+            #     self.m += 1
+            #     print('!!!!!!!!!!!!!!!!!!!!!!!!!!!!!'*ans1*ans2, end='')
+            #     print(f'm={self.m}', ' ' * (4 - len(str(self.m))), f'o=', *o, ' ' * (48 - len(str(o))),
+            #           f' u={u} {ans1} {ans2}', ' ' * (18 - len(str(u))), f' x={x1} {y1} {z1}')
+            return 0
+
+        # typeansw = [(o[0] < -a / 2 and x1 > -a / 2)]
+        # typeansw.append((o[0] > a / 2 and x1 < a / 2))
+        # typeansw.append((o[1] < -a / 2 and y1 > -a / 2))
+        # typeansw.append((o[1] > a / 2 and y1 < a / 2))
+        # typeansw.append((o[2] < -a / 2 and z1 < -a / 2))
+        # typeansw.append((o[2] > a / 2 and z1 < a / 2))
+        # # ans1 = (o[0] < -a / 2 and x1 > -a / 2)
+        # # ans2 = (o[0] < -a / 2 and x1 > -a / 2)
+        # #     pointtype_cube = 1
+        return 0
 
     def create_outfile(self):
         """Вызываем все функции, делаем вычисления и записываем в файл"""
@@ -176,7 +253,6 @@ class LatticeCreator:
                                         self.nods_to_write[1].append((i, j, k))
                         # Количество внутренних узлов записываем и количество внешних граничных узлов:
                         file.write(f'{nums[0]};{nums[1]}\n')
-                        # print(self.nods_to_write)
 
                     case 2:  # эллипсоид
                         pass
@@ -196,8 +272,6 @@ class LatticeCreator:
                                         self.nods_to_write[0].append((i, j, k))
                                     elif (x - self.incr[0]) < (self.cube_centre[0] - self.cube_size / 2):
                                         nums[1] += 1
-                                        # if self.isnewnode(x, y, z):
-                                        #     self.border[0].append((x, y, z))
                                         self.nods_to_write[1].append((i, j, k))
                                     elif (x + self.incr[0]) > (self.cube_centre[0] + self.cube_size / 2):
                                         nums[2] += 1
@@ -227,35 +301,87 @@ class LatticeCreator:
                     case 4:  # параллелепипед
                         pass
 
-                match self.border_type:  # и далее всё одинаково:
-                    # id; i; j; k; 26 * расстояний (от узла до границы, в пределах одного узла) по
-                    # 26 заданным направлениям; вектор нормали к ближайшей границе (единичный);
-                    # расстояние до ближайшей границы (по вектору нормали будет)
-                    # идентификатор узла определяется id = i + (j + k * Ny) *Nx,
-                    # сначала список узлов внутренних, потом по очереди всех границ
+                match self.border_type:
+                    # Далее всё одинаково:
+                    #
+                    #     id; i; j; k;
+                    #     26 * расстояний (от узла до границы, в пределах одного узла) по 26 заданным направлениям;
+                    #     вектор нормали к ближайшей границе (единичный);
+                    #     расстояние до ближайшей границы (по вектору нормали будет).
+                    #
+                    #     Идентификатор узла определяется id = i + (j + k * Ny) * Nx,
+                    #     сначала список узлов внутренних, потом по очереди всех границ
+
                     case 0:  # произвольная граница с заданием по точкам/аналитически
                         pass
                     case 1:  # сфера
                         for n in range(2):
+                            # self.m = 0  # счётчик принтов для отлова ошибок
                             # сначала для внутренних узлов считаем и записываем (n=0), затем для границы (n=1):
-                            for a in self.nods_to_write[n]:
-                                id_ = a[0] + (a[1] + a[2] * self.Ny) * self.Nx
-                                file.write(f'{id_};{a[0]};{a[1]};{a[2]}\n')
+                            for i, j, k in self.nods_to_write[n]:
+                                id_ = i + (j + k * self.Ny) * self.Nx
+                                file.write(f'{id_};{i};{j};{k}')
+                                x = self.x_min + i * self.incr[0]
+                                y = self.y_min + j * self.incr[1]
+                                z = self.z_min + k * self.incr[2]
+                                # 26 * расстояний по 26 заданным направлениям:
+                                for vector in self.BASIS:
+                                    file.write(f';{self.nearbordercheck_sphere((x, y, z), vector)}')
 
-                        # теперь для граничных узлов считаем и записываем:
+                                match n:
+                                    case 0: #внутренние узлы (снаружи сферы)
+                                        dx = self.sphere_centre[0] - x
+                                        dy = self.sphere_centre[1] - y
+                                        dz = self.sphere_centre[2] - z
+                                        length = (dx ** 2 + dy ** 2 + dz ** 2) ** 0.5
+                                        # вектор нормали к ближайшей границе (единичный):
+                                        file.write(f';{dx / length};{dy / length};{dz / length}')
+                                        # расстояние до ближайшей границы (по вектору нормали):
+                                        file.write(f';{length - self.sphere_r}')
+                                        # print(
+                                        #     f'hello:    {dx / length};{dy / length};{dz / length};{length - self.sphere_r}',
+                                        #     x, y, z)
+                                    case 1: #граничные узлы (внутри сферы)
+                                        dx = x - self.sphere_centre[0]
+                                        dy = y - self.sphere_centre[1]
+                                        dz = z - self.sphere_centre[2]
+                                        length = (dx ** 2 + dy ** 2 + dz ** 2) ** 0.5
+                                        # вектор нормали к ближайшей границе (единичный):
+                                        file.write(f';{dx / length};{dy / length};{dz / length}')
+                                        # расстояние до ближайшей границы (по вектору нормали):
+                                        file.write(f';{self.sphere_r - length}')
+                                        # print(
+                                        #     f'hello: {dx / length};{dy / length};{dz / length};{self.sphere_r - length}',
+                                        #     x, y, z)
+
+                                file.write(f'\n')
+
                     case 2:  # эллипсоид
                         pass
                     case 3:  # куб
                         for n in range(7):
+                            # self.m = 0  # счётчик принтов для отлова ошибок
                             # сначала для внутренних узлов считаем и записываем (n=0), затем для всех 6 границ (n>=1):
-                            for a in self.nods_to_write[n]:
-                                id_ = a[0] + (a[1] + a[2] * self.Ny) * self.Nx
-                                file.write(f'{id_};{a[0]};{a[1]};{a[2]}\n')
+                            for i, j, k in self.nods_to_write[n]:
+                                id_ = i + (j + k * self.Ny) * self.Nx
+                                file.write(f'{id_};{i};{j};{k}')
+                                x = self.x_min + i * self.incr[0]
+                                y = self.y_min + j * self.incr[1]
+                                z = self.z_min + k * self.incr[2]
+                                # 26 * расстояний по 26 заданным направлениям:
+                                for vector in self.BASIS:
+                                    file.write(f';{self.nearbordercheck_cube((x, y, z), vector)}')
+
+                                # вектор нормали к ближайшей границе (единичный):
+
+                                # расстояние до ближайшей границы (по вектору нормали):
+
+                                file.write(f'\n')
                     case 4:  # параллелепипед
                         pass
 
-        except:
-            print('Ошибка при создании выходного файла')
+        except Exception as error:
+            print(f'Ошибка при создании выходного файла:\n{error}')
 
 
 # match self.border_type:  # zzz
@@ -273,6 +399,8 @@ class LatticeCreator:
 
 creator1 = LatticeCreator()
 creator1.create_outfile()
+# print(creator1.BASIS)
+# print(creator1.vect_scalar_mult((1, 2, 3), (1, 2, 3))**0.5)
 # brdr = [[(1, 2, 3), (7, 9, 32), (11, 18, 98)], [], [(1, 5, 1)], [], [], [(1,5,5), (7,8,644),(1,5,7)]]
 # x = 1
 # y = 5
