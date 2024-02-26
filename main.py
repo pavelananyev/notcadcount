@@ -209,83 +209,43 @@ class LatticeCreator:
         # вычисляем по скольки координатам точка граничит с кубом в пределах узла
         # и расстояние до границы:
         numoftrue = 0
+        delta = [abs(abs(o[n] - cb[n]) - a / 2) for n in range(3)]
         ans = [False for _ in range(3)]
-        delta_x = abs(abs(x - cb[0]) - a / 2)
-        delta_y = abs(abs(y - cb[1]) - a / 2)
-        delta_z = abs(abs(z - cb[2]) - a / 2)
-        if delta_x <= self.incr[0]:
-            numoftrue += 1
-            ans[0] = True
-        if delta_y <= self.incr[1]:
-            numoftrue += 1
-            ans[1] = True
-        if delta_z <= self.incr[2]:
-            numoftrue += 1
-            ans[2] = True
-        # формируем вектор до границы по направлению базисного вектора
-        vector_to_border = (0, 0, 0)
+        for n in range(3):
+            if delta[n] <= self.incr[n]:
+                numoftrue += 1
+                ans[n] = True
+        # вычисляем расстояние до куба для разных вариантов расположения узла:
+        xoryorz_dist = 0 # сначала находим расстояние до границы по одной из координат, которая определяет
+        # длину всего вектора до границы для конкретного расположения узла относительно куба
         match numoftrue:
             case 1:
-                xoryorz_dist = ans[0] * delta_x + ans[1] * delta_y + ans[2] * delta_z
-                vector_to_border = (u[0] * xoryorz_dist, u[1] * xoryorz_dist, u[2] * xoryorz_dist)
+                xoryorz_dist = ans[0] * delta[0] + ans[1] * delta[1] + ans[2] * delta[2]
             case 2:
-                vector_to_border = (0, 0, 0)
+                if ans1:  # если снаружи куба
+                    xoryorz_dist = max(ans[0] * delta[0], ans[1] * delta[1], ans[2] * delta[2])
+                elif ans2:  # если внутри куба
+                    # находим, какие из компонент (по осям) базисных векторов
+                    # смотрят от этой точки в сторону границы куба по этой оси (ближайшей в пределах шага):
+                    dist_by_axis = []
+                    for n in range(3):
+                        chek = ans[n] * (self.sign_of_num(u[n]) == self.sign_of_num(o[n] - cb[n]))
+                        if chek:
+                            dist_by_axis.append(delta[n])
+                    xoryorz_dist = dist_by_axis[0] if len(dist_by_axis) == 1 else min(dist_by_axis)
             case 3:
-                vector_to_border = (0, 0, 0)
-
-        # offset = 0
-        # sign_of_num
-        # if (o[0] < -a / 2) and (x1 > -a / 2):  # 0 снаружи внутрь минус
-        #     ans[0] = True
-        #     numoftrue += 1
-        #     offset = -a / 2
-        # if (o[0] > -a / 2) and (x1 < -a / 2):  # 1 изнутри наружу минус
-        #     ans[1] = True
-        #     numoftrue += 1
-        #     offset = -a / 2
-        # if (o[0] > a / 2) and (x1 < a / 2):  # 2 снаружи внутрь плюс
-        #     ans[2] = True
-        #     numoftrue += 1
-        #     offset = a / 2
-        # if (o[0] < a / 2) and (x1 > a / 2):  # 3 изнутри наружу плюс
-        #     ans[3] = True
-        #     numoftrue += 1
-        #     offset = a / 2
-        # if (o[1] < -a / 2) and (y1 > -a / 2):  # 4 снаружи внутрь минус
-        #     ans[4] = True
-        #     numoftrue += 1
-        #     offset = -a / 2
-        # if (o[1] > -a / 2) and (y1 < -a / 2):  # 5 изнутри наружу минус
-        #     ans[5] = True
-        #     numoftrue += 1
-        #     offset = -a / 2
-        # if (o[1] > a / 2) and (y1 < a / 2):  # 6 снаружи внутрь плюс
-        #     ans[6] = True
-        #     numoftrue += 1
-        #     offset = a / 2
-        # if (o[1] < a / 2) and (y1 > a / 2):  # 7 изнутри наружу плюс
-        #     ans[7] = True
-        #     numoftrue += 1
-        #     offset = a / 2
-        # if (o[2] < -a / 2) and (z1 > -a / 2):  # 8 снаружи внутрь минус
-        #     ans[8] = True
-        #     numoftrue += 1
-        #     offset = -a / 2
-        # if (o[2] > -a / 2) and (z1 < -a / 2):  # 9 изнутри наружу минус
-        #     ans[9] = True
-        #     numoftrue += 1
-        #     offset = -a / 2
-        # if (o[2] > a / 2) and (z1 < a / 2):  # 10 снаружи внутрь плюс
-        #     ans[10] = True
-        #     numoftrue += 1
-        #     offset = a / 2
-        # if (o[2] < a / 2) and (z1 > a / 2):  # 11 изнутри наружу плюс
-        #     ans[11] = True
-        #     numoftrue += 1
-        #     offset = a / 2
-        # print(ans, numoftrue, offset)
-        # vect = ((o[0] - offset) * u[0], (o[1] - offset) * u[1], (o[2] - offset) * u[2])
-        distance = (self.vect_scalar_mult(vector_to_border, vector_to_border) ** 0.5)
+                if ans1:  # если снаружи куба
+                    xoryorz_dist = max(delta)
+                elif ans2:  # если внутри куба
+                    # находим, какие из компонент (по осям) базисных векторов
+                    # смотрят от этой точки в сторону границы куба по этой оси (ближайшей в пределах шага):
+                    dist_by_axis = []
+                    for n in range(3):
+                        chek = self.sign_of_num(u[n]) == self.sign_of_num(o[n] - cb[n])
+                        if chek:
+                            dist_by_axis.append(delta[n])
+                    xoryorz_dist = dist_by_axis[0] if len(dist_by_axis) == 1 else min(dist_by_axis)
+        distance = xoryorz_dist * (self.vect_scalar_mult(u, u) ** 0.5)
         return distance
 
     def create_outfile(self):
