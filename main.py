@@ -178,6 +178,9 @@ class LatticeCreator:
                 return True
         return False
 
+    def sign_of_num(self, x):
+        return 0 if abs(x) == 0 else int(x / abs(x))
+
     def nearbordercheck_cube(self, o: tuple, u: tuple) -> float:
         # o - координаты узла, u - базисный вектор
         """Определаяем, граничит ли данный узел с границей куба
@@ -187,29 +190,103 @@ class LatticeCreator:
         в пределах расстояния между узлами в этом направлении."""
         cb = self.cube_centre  # координаты центра куба
         a = self.cube_size  # размер куба
-        if abs(o[0] - cb[0]) == a / 2 or abs(o[1] - cb[1]) == a / 2 or abs(o[2] - cb[2]) == a / 2:
+        x = o[0]
+        y = o[1]
+        z = o[2]
+        if abs(x - cb[0]) == a / 2 or abs(y - cb[1]) == a / 2 or abs(z - cb[2]) == a / 2:
             return 0
 
         x1 = o[0] + u[0] * self.incr[0]
         y1 = o[1] + u[1] * self.incr[1]
         z1 = o[2] + u[2] * self.incr[2]
 
-        ans1 = self.isincheck_cube(o[0], o[1], o[2], cb[0], cb[1], cb[2], a)
+        ans1 = self.isincheck_cube(x, y, z, cb[0], cb[1], cb[2], a)
         ans2 = self.isincheck_cube(x1, y1, z1, cb[0], cb[1], cb[2], a)
         if ans1 == ans2:  # если изначальная точка и ближайшая по базисному
             # вектору - по одну сторону границы, то возвращаем 0
             return 0
 
-        # typeansw = [(o[0] < -a / 2 and x1 > -a / 2)]
-        # typeansw.append((o[0] > a / 2 and x1 < a / 2))
-        # typeansw.append((o[1] < -a / 2 and y1 > -a / 2))
-        # typeansw.append((o[1] > a / 2 and y1 < a / 2))
-        # typeansw.append((o[2] < -a / 2 and z1 < -a / 2))
-        # typeansw.append((o[2] > a / 2 and z1 < a / 2))
-        # # ans1 = (o[0] < -a / 2 and x1 > -a / 2)
-        # # ans2 = (o[0] < -a / 2 and x1 > -a / 2)
-        # #     pointtype_cube = 1
-        return 0
+        # вычисляем по скольки координатам точка граничит с кубом в пределах узла
+        # и расстояние до границы:
+        numoftrue = 0
+        ans = [False for _ in range(3)]
+        delta_x = abs(abs(x - cb[0]) - a / 2)
+        delta_y = abs(abs(y - cb[1]) - a / 2)
+        delta_z = abs(abs(z - cb[2]) - a / 2)
+        if delta_x <= self.incr[0]:
+            numoftrue += 1
+            ans[0] = True
+        if delta_y <= self.incr[1]:
+            numoftrue += 1
+            ans[1] = True
+        if delta_z <= self.incr[2]:
+            numoftrue += 1
+            ans[2] = True
+        # формируем вектор до границы по направлению базисного вектора
+        vector_to_border = (0, 0, 0)
+        match numoftrue:
+            case 1:
+                xoryorz_dist = ans[0] * delta_x + ans[1] * delta_y + ans[2] * delta_z
+                vector_to_border = (u[0] * xoryorz_dist, u[1] * xoryorz_dist, u[2] * xoryorz_dist)
+            case 2:
+                vector_to_border = (0, 0, 0)
+            case 3:
+                vector_to_border = (0, 0, 0)
+
+        # offset = 0
+        # sign_of_num
+        # if (o[0] < -a / 2) and (x1 > -a / 2):  # 0 снаружи внутрь минус
+        #     ans[0] = True
+        #     numoftrue += 1
+        #     offset = -a / 2
+        # if (o[0] > -a / 2) and (x1 < -a / 2):  # 1 изнутри наружу минус
+        #     ans[1] = True
+        #     numoftrue += 1
+        #     offset = -a / 2
+        # if (o[0] > a / 2) and (x1 < a / 2):  # 2 снаружи внутрь плюс
+        #     ans[2] = True
+        #     numoftrue += 1
+        #     offset = a / 2
+        # if (o[0] < a / 2) and (x1 > a / 2):  # 3 изнутри наружу плюс
+        #     ans[3] = True
+        #     numoftrue += 1
+        #     offset = a / 2
+        # if (o[1] < -a / 2) and (y1 > -a / 2):  # 4 снаружи внутрь минус
+        #     ans[4] = True
+        #     numoftrue += 1
+        #     offset = -a / 2
+        # if (o[1] > -a / 2) and (y1 < -a / 2):  # 5 изнутри наружу минус
+        #     ans[5] = True
+        #     numoftrue += 1
+        #     offset = -a / 2
+        # if (o[1] > a / 2) and (y1 < a / 2):  # 6 снаружи внутрь плюс
+        #     ans[6] = True
+        #     numoftrue += 1
+        #     offset = a / 2
+        # if (o[1] < a / 2) and (y1 > a / 2):  # 7 изнутри наружу плюс
+        #     ans[7] = True
+        #     numoftrue += 1
+        #     offset = a / 2
+        # if (o[2] < -a / 2) and (z1 > -a / 2):  # 8 снаружи внутрь минус
+        #     ans[8] = True
+        #     numoftrue += 1
+        #     offset = -a / 2
+        # if (o[2] > -a / 2) and (z1 < -a / 2):  # 9 изнутри наружу минус
+        #     ans[9] = True
+        #     numoftrue += 1
+        #     offset = -a / 2
+        # if (o[2] > a / 2) and (z1 < a / 2):  # 10 снаружи внутрь плюс
+        #     ans[10] = True
+        #     numoftrue += 1
+        #     offset = a / 2
+        # if (o[2] < a / 2) and (z1 > a / 2):  # 11 изнутри наружу плюс
+        #     ans[11] = True
+        #     numoftrue += 1
+        #     offset = a / 2
+        # print(ans, numoftrue, offset)
+        # vect = ((o[0] - offset) * u[0], (o[1] - offset) * u[1], (o[2] - offset) * u[2])
+        distance = (self.vect_scalar_mult(vector_to_border, vector_to_border) ** 0.5)
+        return distance
 
     def create_outfile(self):
         """Вызываем все функции, делаем вычисления и записываем в файл"""
@@ -241,7 +318,7 @@ class LatticeCreator:
                         nums = [0, 0, self.Ny * self.Nz, self.Ny * self.Nz, self.Nx * self.Nz, self.Nx * self.Nz,
                                 self.Nx * self.Ny, self.Nx * self.Ny]
                         self.nods_to_write = [[] for _ in range(8)]
-                        for k in range(1, self.Nz - 1):# убираем из циклов крайние значения - узлы границ
+                        for k in range(1, self.Nz - 1):  # убираем из циклов крайние значения - узлы границ
                             # расчётных областей, т.к. они отдельно ниже генерируются
                             z = self.z_min + k * self.incr[2]
                             for j in range(1, self.Ny - 1):
@@ -307,7 +384,7 @@ class LatticeCreator:
                         self.nods_to_write[5].append((i, self.Ny - 1, k))
                 for j in range(self.Ny):
                     for i in range(self.Nx):
-                        self.nods_to_write[6].append((i, j,0))
+                        self.nods_to_write[6].append((i, j, 0))
                         self.nods_to_write[7].append((i, j, self.Nz - 1))
 
                 match self.border_type:
