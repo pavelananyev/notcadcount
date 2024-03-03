@@ -64,28 +64,6 @@ class LatticeCreator:
         self.Ny = self.num_of_nodes[2] + self.num_of_nodes[3] + 1
         self.Nz = self.num_of_nodes[4] + self.num_of_nodes[5] + 1
 
-    # def isoutborder(self, x, y, z):
-    #     if x == self.x_min:
-    #         self.bordernum = 2
-    #         return True
-    #     elif x == self.x_min + (self.Nx - 1) * self.incr[0]:
-    #         self.bordernum = 3
-    #         return True
-    #     elif y == self.y_min:
-    #         self.bordernum = 4
-    #         return True
-    #     elif y == self.y_min + (self.Ny - 1) * self.incr[1]:
-    #         self.bordernum = 5
-    #         return True
-    #     elif z == self.z_min:
-    #         self.bordernum = 6
-    #         return True
-    #     elif z == self.z_min + (self.Nz - 1) * self.incr[2]:
-    #         self.bordernum = 7
-    #         return True
-    #     else:
-    #         return False
-
     @staticmethod
     def isincheck_sphere(x, y, z, cx, cy, cz, r):
         """ определаяем внешний/внутренний ли узел по
@@ -428,30 +406,6 @@ class LatticeCreator:
         except Exception as error:
             print(f'Ошибка при создании выходного файла:\n{error}')
 
-
-# match self.border_type:  # zzz
-#     case 0:  # произвольная граница с заданием по точкам/аналитически
-#         pass
-#     case 1:  # сфера
-#         pass
-#     case 2:  # эллипсоид
-#         pass
-#     case 3:  # куб
-#         pass
-#     case 4:  # параллелепипед
-#         pass
-
-
 creator1 = LatticeCreator()
 creator1.create_outfile()
-# print(creator1.BASIS)
-# print(creator1.vect_scalar_mult((1, 2, 3), (1, 2, 3))**0.5)
-# brdr = [[(1, 2, 3), (7, 9, 32), (11, 18, 98)], [], [(1, 5, 1)], [], [], [(1,5,5), (7,8,644),(1,5,7)]]
-# x = 1
-# y = 5
-# z = 0
-# print(LatticeCreator.isnewnode(brdr, x, y, z))
 
-# print(*creator1.nods_xyz, sep='\n')
-# print(creator1.isoutcheck_sphere(7.07106781186,25,15,0,0,0,30))
-# print(creator1.isoutcheck_cube(-9.999999999999999,16,14.999999999999999,-5,1,0,30))
