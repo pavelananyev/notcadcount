@@ -77,22 +77,22 @@ class Lattice:
     #     else:
     #         return False
 
-class Figure():
-    def __init__(self):
-        self.figure_centre = None
-        self.figure_size = None
+
+class Figure:
+    pass
+
 
 class Sphere(Figure):
-    def __init__(self, path_in='input.txt', path_out='output.txt'):
-        super().__init__(path_in, path_out)
-
+    def __init__(self, centre=None, size=None):
+        self.centre = centre
+        self.size = size
     def isincheck(self, o: tuple):
         # o - координаты узла
         """Определаяем внешний/внутренний ли узел по
         его координатам и координатам центра сферы и её радиуса
         True, если узел внутренний (за пределами границы, внутри расчётной области)"""
-        return ((o[0] - self.figure_centre[0]) ** 2 + (o[1] - self.figure_centre[1]) ** 2 + (
-                o[2] - self.figure_centre[2]) ** 2) >= self.figure_size ** 2
+        return ((o[0] - self.centre[0]) ** 2 + (o[1] - self.centre[1]) ** 2 + (
+                o[2] - self.centre[2]) ** 2) >= self.size ** 2
 
     def isbordercheck(self, o: tuple):
         # o - координаты узла
@@ -100,7 +100,7 @@ class Sphere(Figure):
         хотя бы по одной своей координате; определяем по его координатам и координатам
         центра сферы и её радиуса
         True, если узел граничит со сферой"""
-        for vector in self.BASIS:
+        for vector in Lattice.BASIS:
             ans = self.isincheck((o[0] + self.incr[0] * vector[0], o[1] + self.incr[1] * vector[1],
                                   o[2] + self.incr[2] * vector[2]))
             if ans:
@@ -114,8 +114,8 @@ class Sphere(Figure):
         Возвращает 0, если узел не граничит в этом направлении, или лежит на границе (расстояние = 0).
         Если граничит - возвращает расстояние (по направлению вектора)
         в пределах расстояния между узлами в этом направлении."""
-        sph = self.figure_centre  # координаты центра сферы
-        r = self.figure_size  # радиус сферы
+        sph = self.centre  # координаты центра сферы
+        r = self.size  # радиус сферы
         if ((o[0] - sph[0]) ** 2 + (o[1] - sph[1]) ** 2 + (o[2] - sph[2]) ** 2) ** 0.5 == r:
             return 0
         ans1 = self.isincheck(o)
@@ -146,21 +146,21 @@ class Sphere(Figure):
         # o - координаты узла
         """Вычисляет вектор нормали к поверхности для сферы, затем возвращает его координаты и длину.
         Если точка ровно на поверхности - возвращает нули"""
-        dx = self.figure_centre[0] - o[0]
-        dy = self.figure_centre[1] - o[1]
-        dz = self.figure_centre[2] - o[2]
+        dx = self.centre[0] - o[0]
+        dy = self.centre[1] - o[1]
+        dz = self.centre[2] - o[2]
         length = (dx ** 2 + dy ** 2 + dz ** 2) ** 0.5
-        if length - self.figure_size == 0:  # если узел лежит ровно на сфере
+        if length - self.size == 0:  # если узел лежит ровно на сфере
             # возвращаем нулевые вектор нормали и расстояние:
             return 0, 0, 0, 0
         else:
             match n:
                 case 0 | 2 | 3 | 4 | 5 | 6 | 7:  # внутренние узлы (снаружи сферы)
                     # возвращаем вектор нормали и расстояние:
-                    return (dx / length), (dy / length), (dz / length), (length - self.figure_size)
+                    return (dx / length), (dy / length), (dz / length), (length - self.size)
                 case 1:  # граничные узлы (внутри сферы)
                     # возвращаем вектор нормали и расстояние:
-                    return (-dx / length), (-dy / length), (-dz / length), (self.figure_size - length)
+                    return (-dx / length), (-dy / length), (-dz / length), (self.size - length)
 
 
 class Ellipsoid(Lattice):
@@ -397,8 +397,8 @@ def get_input():
             lattice.minmaxcoord = minmaxcoord
             lattice.incr = incr
             lattice.border_type = border_type
-            lattice.figure_centre = figure_centre
-            lattice.figure_size = figure_size
+            lattice.centre = figure_centre
+            lattice.size = figure_size
     except Exception as error:
         print(f'Неверный формат входного файла:\n{error}')
     return lattice
@@ -408,9 +408,9 @@ def create_outfile():
     """Вызываем все функции, делаем вычисления и записываем в файл"""
     latt = get_input()
     latt.count_nods_xyz()
-    latt.x_min = latt.figure_centre[0] - latt.num_of_nodes[0] * latt.incr[0]
-    latt.y_min = latt.figure_centre[1] - latt.num_of_nodes[2] * latt.incr[1]
-    latt.z_min = latt.figure_centre[2] - latt.num_of_nodes[4] * latt.incr[2]
+    latt.x_min = latt.centre[0] - latt.num_of_nodes[0] * latt.incr[0]
+    latt.y_min = latt.centre[1] - latt.num_of_nodes[2] * latt.incr[1]
+    latt.z_min = latt.centre[2] - latt.num_of_nodes[4] * latt.incr[2]
     try:
         with open(latt.path_out, "w") as file:
             file.write(
