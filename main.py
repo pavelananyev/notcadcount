@@ -1,10 +1,8 @@
-BASIS = ((1, 0, 0), (-1, 0, 0), (0, 1, 0), (0, -1, 0), (0, 0, 1), (0, 0, -1), (1, 1, 0), (-1, 1, 0), (1, -1, 0),
-         (-1, -1, 0), (1, 0, 1), (-1, 0, 1), (1, 0, -1), (-1, 0, -1), (0, 1, 1), (0, -1, 1), (0, 1, -1),
-         (0, -1, -1), (1, 1, 1), (-1, 1, 1), (1, -1, 1), (-1, -1, 1), (1, 1, -1), (-1, 1, -1), (1, -1, -1),
-         (-1, -1, -1))
-
-
-class LatticeForBorder:
+class Lattice:
+    BASIS = ((1, 0, 0), (-1, 0, 0), (0, 1, 0), (0, -1, 0), (0, 0, 1), (0, 0, -1), (1, 1, 0), (-1, 1, 0), (1, -1, 0),
+             (-1, -1, 0), (1, 0, 1), (-1, 0, 1), (1, 0, -1), (-1, 0, -1), (0, 1, 1), (0, -1, 1), (0, 1, -1),
+             (0, -1, -1), (1, 1, 1), (-1, 1, 1), (1, -1, 1), (-1, -1, 1), (1, 1, -1), (-1, 1, -1), (1, -1, -1),
+             (-1, -1, -1))
 
     def __init__(self, path_in='input.txt', path_out='output.txt'):
         self.path_in = path_in
@@ -16,8 +14,6 @@ class LatticeForBorder:
         self.minmaxcoord = None
         self.incr = None
         self.border_type = None
-        self.figure_centre = None
-        self.figure_size = None
 
     def count_nods_xyz(self):
         """Создаём список (по осям) списков координат всех узлов
@@ -81,26 +77,32 @@ class LatticeForBorder:
     #     else:
     #         return False
 
+class Figure():
+    def __init__(self):
+        self.figure_centre = None
+        self.figure_size = None
 
-class Sphere(LatticeForBorder):
+class Sphere(Figure):
     def __init__(self, path_in='input.txt', path_out='output.txt'):
         super().__init__(path_in, path_out)
 
-    @staticmethod
-    def isincheck(x, y, z, cx, cy, cz, r):
+    def isincheck(self, o: tuple):
+        # o - координаты узла
         """Определаяем внешний/внутренний ли узел по
         его координатам и координатам центра сферы и её радиуса
         True, если узел внутренний (за пределами границы, внутри расчётной области)"""
-        return ((x - cx) ** 2 + (y - cy) ** 2 + (z - cz) ** 2) ** 0.5 >= r
+        return ((o[0] - self.figure_centre[0]) ** 2 + (o[1] - self.figure_centre[1]) ** 2 + (
+                o[2] - self.figure_centre[2]) ** 2) >= self.figure_size ** 2
 
-    def isbordercheck(self, x, y, z, cx, cy, cz, r):
+    def isbordercheck(self, o: tuple):
+        # o - координаты узла
         """Определаяем, граничит ли внешний узел с границей сферы (а значит с внутренним узлом)
         хотя бы по одной своей координате; определяем по его координатам и координатам
         центра сферы и её радиуса
         True, если узел граничит со сферой"""
-        for vector in BASIS:
-            ans = self.isincheck(x + self.incr[0] * vector[0], y + self.incr[1] * vector[1],
-                                 z + self.incr[2] * vector[2], cx, cy, cz, r)
+        for vector in self.BASIS:
+            ans = self.isincheck((o[0] + self.incr[0] * vector[0], o[1] + self.incr[1] * vector[1],
+                                  o[2] + self.incr[2] * vector[2]))
             if ans:
                 return True
         return False
@@ -116,13 +118,9 @@ class Sphere(LatticeForBorder):
         r = self.figure_size  # радиус сферы
         if ((o[0] - sph[0]) ** 2 + (o[1] - sph[1]) ** 2 + (o[2] - sph[2]) ** 2) ** 0.5 == r:
             return 0
-
-        x1 = o[0] + u[0] * self.incr[0]
-        y1 = o[1] + u[1] * self.incr[1]
-        z1 = o[2] + u[2] * self.incr[2]
-
-        ans1 = self.isincheck(o[0], o[1], o[2], sph[0], sph[1], sph[2], r)
-        ans2 = self.isincheck(x1, y1, z1, sph[0], sph[1], sph[2], r)
+        ans1 = self.isincheck(o)
+        ans2 = self.isincheck((o[0] + u[0] * self.incr[0],
+                               o[1] + u[1] * self.incr[1], o[2] + u[2] * self.incr[2]))
         if ans1 == ans2:  # если изначальная точка и ближайшая по базисному
             # вектору - по одну сторону границы, то возвращаем 0
             return 0
@@ -144,12 +142,13 @@ class Sphere(LatticeForBorder):
         else:
             return 0
 
-    def print_normal_and_distance(self, n, x, y, z):
+    def print_normal_and_distance(self, n, o: tuple):
+        # o - координаты узла
         """Вычисляет вектор нормали к поверхности для сферы, затем возвращает его координаты и длину.
         Если точка ровно на поверхности - возвращает нули"""
-        dx = self.figure_centre[0] - x
-        dy = self.figure_centre[1] - y
-        dz = self.figure_centre[2] - z
+        dx = self.figure_centre[0] - o[0]
+        dy = self.figure_centre[1] - o[1]
+        dz = self.figure_centre[2] - o[2]
         length = (dx ** 2 + dy ** 2 + dz ** 2) ** 0.5
         if length - self.figure_size == 0:  # если узел лежит ровно на сфере
             # возвращаем нулевые вектор нормали и расстояние:
@@ -164,32 +163,35 @@ class Sphere(LatticeForBorder):
                     return (-dx / length), (-dy / length), (-dz / length), (self.figure_size - length)
 
 
-class Ellipsoid(LatticeForBorder):
+class Ellipsoid(Lattice):
     def __init__(self, path_in='input.txt', path_out='output.txt'):
         super().__init__(path_in, path_out)
 
     pass
 
 
-class Cube(LatticeForBorder):
+class Cube(Lattice):
     def __init__(self, path_in='input.txt', path_out='output.txt'):
         super().__init__(path_in, path_out)
 
-    @staticmethod
-    def isincheck(x, y, z, cx, cy, cz, a):
+    def isincheck(self, o: tuple):
+        # o - координаты узла
         """ Определаяем внутренний/внешний ли узел по
         его координатам и координатам центра куба и размеру его грани
         True, если узел внутренний (за пределами границы, внутри расчётной области)"""
-        return abs(x - cx) >= a / 2 or abs(y - cy) >= a / 2 or abs(z - cz) >= a / 2
+        return (abs(o[0] - self.figure_centre[0]) >= self.figure_size[0] / 2 or
+                abs(o[1] - self.figure_centre[0]) >= self.figure_size[1] / 2 or
+                abs(o[2] - self.figure_centre[0]) >= self.figure_size[2] / 2)
 
-    def isbordercheck(self, x, y, z, cx, cy, cz, a):
+    def isbordercheck(self, o: tuple):
+        # o - координаты узла
         """Определаяем, граничит ли внешний узел с границей куба (а значит с внутренним узлом)
         хотя бы по одной своей координате;
         определяем по его координатам и координатам центра куба и его размеру
         True, если узел граничит с кубом"""
-        for vector in BASIS:
-            ans = self.isincheck(x + self.incr[0] * vector[0], y + self.incr[1] * vector[1],
-                                 z + self.incr[2] * vector[2], cx, cy, cz, a)
+        for vector in self.BASIS:
+            ans = self.isincheck((o[0] + self.incr[0] * vector[0], o[1] + self.incr[1] * vector[1],
+                                  o[2] + self.incr[2] * vector[2]))
             if ans:
                 return True
         return False
@@ -206,12 +208,9 @@ class Cube(LatticeForBorder):
         if abs(o[0] - cb[0]) == a / 2 or abs(o[1] - cb[1]) == a / 2 or abs(o[2] - cb[2]) == a / 2:
             return 0
 
-        x1 = o[0] + u[0] * self.incr[0]
-        y1 = o[1] + u[1] * self.incr[1]
-        z1 = o[2] + u[2] * self.incr[2]
-
-        ans1 = self.isincheck(o[0], o[1], o[2], cb[0], cb[1], cb[2], a)
-        ans2 = self.isincheck(x1, y1, z1, cb[0], cb[1], cb[2], a)
+        ans1 = self.isincheck(o)
+        ans2 = self.isincheck((o[0] + u[0] * self.incr[0],
+                               o[1] + u[1] * self.incr[1], o[2] + u[2] * self.incr[2]))
         if ans1 == ans2:  # если изначальная точка и ближайшая по базисному
             # вектору - по одну сторону границы, то возвращаем 0
             return 0
@@ -258,12 +257,12 @@ class Cube(LatticeForBorder):
         distance = xoryorz_dist * (self.vect_scalar_mult(u, u) ** 0.5)
         return distance
 
-    def print_normal_and_distance(self, n, x, y, z):
+    def print_normal_and_distance(self, n, o):
         """Вычисляет вектор нормали к поверхности для куба, затем возвращает его координаты и длину.
         Если точка ровно на поверхности - возвращает нули"""
-        dx = self.figure_centre[0] - x
-        dy = self.figure_centre[1] - y
-        dz = self.figure_centre[2] - z
+        dx = self.figure_centre[0] - o[0]
+        dy = self.figure_centre[1] - o[1]
+        dz = self.figure_centre[2] - o[2]
         a = self.figure_size
         ans1 = abs(dx) == a / 2
         ans2 = abs(dy) == a / 2
@@ -346,7 +345,7 @@ class Cube(LatticeForBorder):
                     return norm_x, norm_y, norm_z, length
 
 
-class Parallelepiped(LatticeForBorder):
+class Parallelepiped(Lattice):
     def __init__(self, path_in='input.txt', path_out='output.txt'):
         super().__init__(path_in, path_out)
 
@@ -437,13 +436,10 @@ def create_outfile():
                     y = latt.y_min + j * latt.incr[1]
                     for i in range(1, latt.Nx - 1):
                         x = latt.x_min + i * latt.incr[0]
-                        if latt.isincheck(x, y, z, latt.figure_centre[0], latt.figure_centre[1],
-                                          latt.figure_centre[2], latt.figure_size):
+                        if latt.isincheck((x, y, z)):
                             nums[0] += 1
                             latt.nods_to_write[0].append((i, j, k))
-                        elif latt.isbordercheck(x, y, z, latt.figure_centre[0],
-                                                latt.figure_centre[1],
-                                                latt.figure_centre[2], latt.figure_size):
+                        elif latt.isbordercheck((x, y, z)):
                             nums[1] += 1
                             latt.nods_to_write[1].append((i, j, k))
             # Количество внутренних узлов записываем:
@@ -485,11 +481,11 @@ def create_outfile():
                     y = latt.y_min + j * latt.incr[1]
                     z = latt.z_min + k * latt.incr[2]
                     # 26 * расстояний по 26 заданным направлениям:
-                    for vector in BASIS:
+                    for vector in latt.BASIS:
                         file.write(f';{latt.nearbordercheck((x, y, z), vector)}')
                     # вектор нормали к ближайшей границе (единичный)
                     # и расстояние до ближайшей границы (по вектору нормали):
-                    normal = latt.print_normal_and_distance(n, x, y, z)
+                    normal = latt.print_normal_and_distance(n, (x, y, z))
                     file.write(f';{normal[0]};{normal[1]};{normal[2]};{normal[3]}')
                     file.write(f'\n')
     except Exception as error:
