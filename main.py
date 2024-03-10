@@ -8,7 +8,6 @@ class Point:
             self.x = x[0]
             self.y = x[1]
             self.z = x[2]
-            print('hello')
         else:
             raise ValueError("Координаты должны быть числами!")
 
@@ -65,11 +64,12 @@ class Vector:
 
 
 class Lattice:
-    BASIS = (Vector(v[0], v[1], v[2]) for v in
-             ((1, 0, 0), (-1, 0, 0), (0, 1, 0), (0, -1, 0), (0, 0, 1), (0, 0, -1), (1, 1, 0), (-1, 1, 0), (1, -1, 0),
-              (-1, -1, 0), (1, 0, 1), (-1, 0, 1), (1, 0, -1), (-1, 0, -1), (0, 1, 1), (0, -1, 1), (0, 1, -1),
-              (0, -1, -1), (1, 1, 1), (-1, 1, 1), (1, -1, 1), (-1, -1, 1), (1, 1, -1), (-1, 1, -1), (1, -1, -1),
-              (-1, -1, -1)))
+    BASIS = tuple(Vector(v[0], v[1], v[2]) for v in
+                  ((1, 0, 0), (-1, 0, 0), (0, 1, 0), (0, -1, 0), (0, 0, 1), (0, 0, -1), (1, 1, 0), (-1, 1, 0),
+                   (1, -1, 0),
+                   (-1, -1, 0), (1, 0, 1), (-1, 0, 1), (1, 0, -1), (-1, 0, -1), (0, 1, 1), (0, -1, 1), (0, 1, -1),
+                   (0, -1, -1), (1, 1, 1), (-1, 1, 1), (1, -1, 1), (-1, -1, 1), (1, 1, -1), (-1, 1, -1), (1, -1, -1),
+                   (-1, -1, -1)))
 
     def __init__(self, path_in='input.txt', path_out='output.txt'):
         self.path_in = path_in
@@ -523,11 +523,4 @@ class Parallelepiped(Figure):
 
 
 good_lattice = Lattice()
-good_lattice.get_input()
-print(*[f'{name} = {good_lattice.__dict__[name]}' for name in good_lattice.__dict__.keys()], sep='\n')
-print('___' * 100)
 good_lattice.create_outfile()
-print(*[f'{name} = {good_lattice.__dict__[name]}' for name in good_lattice.__dict__.keys() if name != "nods_to_write"],
-      sep="\n")
-print(f"Number of nods: ", *[len(nods) for nods in good_lattice.nods_to_write])
-
