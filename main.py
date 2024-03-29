@@ -62,6 +62,9 @@ class Vector:
         else:
             raise ValueError("Вектора можно возводить только в целую положительную степень")
 
+    def square_of_norm(self):
+        return self * self
+
 
 class Lattice:
     BASIS = tuple(Vector(v[0], v[1], v[2]) for v in
@@ -125,9 +128,10 @@ class Lattice:
                         figure_centre, figure_size = t[:-1], t[-1]  # координаты центра куба
                         # и длина ребра куба
                         print(f'КУБ с центром {figure_centre} и ребром {figure_size}')
-                        self.figure = Cube(Point(figure_centre), figure_size, self)
+                        self.figure = Parallelepiped(Point(figure_centre), (figure_size, figure_size, figure_size),
+                                                     self)
                     case 4:  # параллелепипед
-                        figure_centre, figure_size = t[:-3], t[-3::]  # координаты центра параллелепипеда
+                        figure_centre, figure_size = t[:-3], tuple(t[-3::])  # координаты центра параллелепипеда
                         # и длины рёбер a, b, c
                         print(
                             f'ПАРАЛЛЕЛЕПИПЕД с центром {figure_centre} и рёбрами {figure_size[0]}, {figure_size[1]},'
@@ -275,7 +279,7 @@ class Sphere(Figure):
         """Определаяем внешний/внутренний ли узел по
         его координатам и координатам центра сферы и её радиуса
         True, если узел внутренний (за пределами границы (либо на ней), внутри расчётной области)"""
-        return (nod - self.centre) ** 2 >= self.size ** 2
+        return (nod - self.centre).square_of_norm() >= self.size ** 2
 
     def nearbordercheck(self, nod: Point, v: Vector) -> float:
         # nod - координаты узла, v - базисный вектор
@@ -285,7 +289,7 @@ class Sphere(Figure):
         или лежит на границе (расстояние = 0).
         Если граничит - возвращает расстояние (по направлению базисного вектора)
         в пределах расстояния между узлами в этом направлении."""
-        if (nod - self.centre) ** 2 == self.size ** 2:
+        if (nod - self.centre).square_of_norm() == self.size ** 2:
             return 0
         ans1 = self.isincheck(nod)
         ans2 = self.isincheck(Point(nod.x + v.x * self.lattice.incr[0],
@@ -295,7 +299,7 @@ class Sphere(Figure):
             # вектору - по одну сторону границы, то возвращаем 0
             return 0
         delta = nod - self.centre
-        a = v ** 2
+        a = v.square_of_norm()
         b = (v * delta) * 2
         c = (delta * delta) - self.size ** 2
         det = (b ** 2 - 4 * a * c)
@@ -316,7 +320,7 @@ class Sphere(Figure):
         """Вычисляет вектор нормали к поверхности для сферы, затем возвращает его координаты и длину.
         Если точка ровно на поверхности - возвращает нули"""
         delta = self.centre - nod
-        length = (delta ** 2) ** 0.5
+        length = delta.square_of_norm() ** 0.5
         if length == self.size:  # если узел лежит ровно на сфере
             # возвращаем нулевые вектор нормали и расстояние:
             return Vector(0, 0, 0), 0
@@ -330,16 +334,79 @@ class Sphere(Figure):
 
 
 class Ellipsoid(Figure):
-    def __init__(self, centre=Point(0, 0, 0), size=None, lattice: Lattice = None):
+    def __init__(self, centre=Point(0, 0, 0), size: tuple = (1, 1, 1), lattice: Lattice = None):
         super().__init__(lattice)
         self.centre = centre
         self.size = size
 
-    pass
+    def isincheck(self, nod: Point):
+        # nod - координаты узла
+        """Определаяем внешний/внутренний ли узел по
+        его координатам и координатам центра эллипсоида и её радиуса
+        True, если узел внутренний (за пределами границы (либо на ней), внутри расчётной области)"""
+        a = self.size[0]
+        b = self.size[1]
+        c = self.size[2]
+        delta = (nod - self.centre)
+        return delta.x ** 2 / a ** 2 + delta.y ** 2 / b ** 2 + delta.z ** 2 / c ** 2 >= 1
+
+    def nearbordercheck(self, nod: Point, v: Vector) -> float:
+        # nod - координаты узла, v - базисный вектор
+        """Определаяем, граничит ли данный узел с границей эллипсоида
+         в пределах и направлении заданного вектора (расстояние - в единицах шага решётки).
+        Возвращает 0, если узел НЕ граничит в этом направлении,
+        или лежит на границе (расстояние = 0).
+        Если граничит - возвращает расстояние (по направлению базисного вектора)
+        в пределах расстояния между узлами в этом направлении."""
+        delta = nod - self.centre
+        a = self.size[0]
+        b = self.size[1]
+        c = self.size[2]
+        if delta.x ** 2 / a ** 2 + delta.y ** 2 / b ** 2 + delta.z ** 2 / c ** 2 == 1:
+            return 0
+        ans1 = self.isincheck(nod)
+        ans2 = self.isincheck(Point(nod.x + v.x * self.lattice.incr[0],
+                                    nod.y + v.y * self.lattice.incr[1],
+                                    nod.z + v.z * self.lattice.incr[2]))
+        if ans1 == ans2:  # если изначальная точка и ближайшая по базисному
+            # вектору - по одну сторону границы, то возвращаем 0
+            return 0
+        a_a = v.square_of_norm()
+        b_b = (v * delta) * 2
+        c_c = (delta * delta) - self.size ** 2
+        det = (b_b ** 2 - 4 * a_a * c_c)
+        if det >= 0:
+            d1 = (- b_b + det ** 0.5) / (2 * a_a)
+            d2 = (- b_b - det ** 0.5) / (2 * a_a)
+            if d1 >= 0 and d2 >= 0:
+                return min(d1, d2) * (a_a ** 0.5)
+            elif d1 >= 0 or d2 >= 0:
+                return max(d1, d2) * (a_a ** 0.5)
+            else:
+                return 0
+        else:
+            return 0
+
+    def print_normal_and_distance(self, nod: Point):
+        # nod - координаты узла
+        """Вычисляет вектор нормали к поверхности для эллипсоида, затем возвращает его координаты и длину.
+        Если точка ровно на поверхности - возвращает нули"""
+        delta = self.centre - nod
+        length = delta.square_of_norm() ** 0.5
+        if length == self.size:  # если узел лежит ровно на эллипсоиде
+            # возвращаем нулевые вектор нормали и расстояние:
+            return Vector(0, 0, 0), 0
+        else:
+            if length >= self.size:  # внутренние узлы (снаружи эллипсоида)
+                # возвращаем вектор нормали и расстояние:
+                return Vector(delta.x / length, delta.y / length, delta.z / length), (length - self.size)
+            else:  # граничные узлы (внутри эллипсоида)
+                # возвращаем вектор нормали и расстояние:
+                return Vector(-delta.x / length, -delta.y / length, -delta.z / length), (self.size - length)
 
 
-class Cube(Figure):
-    def __init__(self, centre=Point(0, 0, 0), size=None, lattice: Lattice = None):
+class Parallelepiped(Figure):
+    def __init__(self, centre=Point(0, 0, 0), size: tuple = (1, 1, 1), lattice: Lattice = None):
         super().__init__(lattice)
         self.centre = centre
         self.size = size
@@ -347,28 +414,31 @@ class Cube(Figure):
     def isincheck(self, nod: Point):
         # nod - координаты узла
         """ Определаяем внутренний/внешний ли узел по
-        его координатам и координатам центра куба и размеру его грани
+        его координатам и координатам центра параллелограмма и размеру его грани
         True, если узел внутренний (за пределами границы (либо на ней), внутри расчётной области)"""
-        return (abs(nod.x - self.centre.x) >= self.size / 2 or
-                abs(nod.y - self.centre.y) >= self.size / 2 or
-                abs(nod.z - self.centre.z) >= self.size / 2)
+        return (abs(nod.x - self.centre.x) >= self.size[0] / 2 or
+                abs(nod.y - self.centre.y) >= self.size[1] / 2 or
+                abs(nod.z - self.centre.z) >= self.size[2] / 2)
 
     def nearbordercheck(self, nod: Point, v: Vector) -> float:
         # nod - координаты узла, v - базисный вектор
-        """Определаяем, граничит ли данный узел с границей куба
+        """Определаяем, граничит ли данный узел с границей параллелограмма
          в пределах и направлении заданного вектора (расстояние - в единицах шага решётки).
         Возвращает 0, если узел НЕ граничит в этом направлении,
         или лежит на границе (расстояние = 0).
         Если граничит - возвращает расстояние (по направлению базисного вектора)
         в пределах расстояния между узлами в этом направлении."""
         delta = nod - self.centre
-        a = self.size  # размер куба
+        # размеры параллелограмма:
+        a = self.size[0]
+        b = self.size[1]
+        c = self.size[2]
         if (abs(delta.x) == a / 2 or
-            abs(delta.y) == a / 2 or
-            abs(delta.z) == a / 2) and (
+            abs(delta.y) == b / 2 or
+            abs(delta.z) == c / 2) and (
                 abs(delta.x) <= a / 2) and (
-                abs(delta.y) <= a / 2) and (
-                abs(delta.z) <= a / 2):
+                abs(delta.y) <= b / 2) and (
+                abs(delta.z) <= c / 2):
             return 0
 
         ans1 = self.isincheck(nod)
@@ -383,25 +453,25 @@ class Cube(Figure):
         # и расстояние до границы:
         numoftrue = 0
         nod_delta_a = [abs(abs(delta.x) - a / 2),
-                       abs(abs(delta.y) - a / 2),
-                       abs(abs(delta.z) - a / 2)]
+                       abs(abs(delta.y) - b / 2),
+                       abs(abs(delta.z) - c / 2)]
         ans = [False for _ in range(3)]
         for n in range(3):
             if nod_delta_a[n] <= self.lattice.incr[n]:
                 numoftrue += 1
                 ans[n] = True
-        # вычисляем расстояние до куба для разных вариантов расположения узла:
+        # вычисляем расстояние до параллелограмма для разных вариантов расположения узла:
         xoryorz_dist = 0  # сначала находим расстояние до границы по одной из координат, которая определяет
-        # длину всего вектора до границы для конкретного расположения узла относительно куба
+        # длину всего вектора до границы для конкретного расположения узла относительно параллелограмма
         match numoftrue:
             case 1:
                 xoryorz_dist = ans[0] * nod_delta_a[0] + ans[1] * nod_delta_a[1] + ans[2] * nod_delta_a[2]
             case 2:
-                if ans1:  # если снаружи куба
+                if ans1:  # если снаружи параллелограмма
                     xoryorz_dist = max(ans[0] * nod_delta_a[0], ans[1] * nod_delta_a[1], ans[2] * nod_delta_a[2])
-                elif ans2:  # если внутри куба
+                elif ans2:  # если внутри параллелограмма
                     # находим, какие из компонент (по осям) базисных векторов
-                    # смотрят от этой точки в сторону границы куба по этой оси (ближайшей в пределах шага):
+                    # смотрят от этой точки в сторону границы параллелограмма по этой оси (ближайшей в пределах шага):
                     dist_by_axis = []
                     for n, param in enumerate(delta.__dict__.keys()):
                         chek = ans[n] * (self.lattice.sign_of_num(v.__dict__[param]) ==
@@ -410,11 +480,11 @@ class Cube(Figure):
                             dist_by_axis.append(nod_delta_a[n])
                     xoryorz_dist = dist_by_axis[0] if len(dist_by_axis) == 1 else min(dist_by_axis)
             case 3:
-                if ans1:  # если снаружи куба
+                if ans1:  # если снаружи параллелограмма
                     xoryorz_dist = max(nod_delta_a)
-                elif ans2:  # если внутри куба
+                elif ans2:  # если внутри параллелограмма
                     # находим, какие из компонент (по осям) базисных векторов
-                    # смотрят от этой точки в сторону границы куба по этой оси (ближайшей в пределах шага):
+                    # смотрят от этой точки в сторону границы параллелограмма по этой оси (ближайшей в пределах шага):
                     dist_by_axis = []
                     for n, param in enumerate(delta.__dict__.keys()):
                         chek = self.lattice.sign_of_num(v.__dict__[param]) == self.lattice.sign_of_num(
@@ -427,99 +497,92 @@ class Cube(Figure):
 
     def print_normal_and_distance(self, nod: Point):
         # nod - координаты узла
-        """Вычисляет вектор нормали к поверхности для куба, затем возвращает его координаты и длину.
+        """Вычисляет вектор нормали к поверхности для параллелограмма, затем возвращает его координаты и длину.
         Если точка ровно на поверхности - возвращает нули"""
         dx = self.centre.x - nod.x
         dy = self.centre.y - nod.y
         dz = self.centre.z - nod.z
-        a = self.size
+        a = self.size[0]
+        b = self.size[1]
+        c = self.size[2]
         ans1 = abs(dx) == a / 2
-        ans2 = abs(dy) == a / 2
-        ans3 = abs(dz) == a / 2
+        ans2 = abs(dy) == b / 2
+        ans3 = abs(dz) == c / 2
         ans4 = abs(dx) <= a / 2
-        ans5 = abs(dy) <= a / 2
-        ans6 = abs(dz) <= a / 2
+        ans5 = abs(dy) <= b / 2
+        ans6 = abs(dz) <= c / 2
         if (ans1 and ans5 and ans6) or (ans2 and ans4 and ans6) or (ans3 and ans4 and ans5):
             # возвращаем вектор нормали и расстояние:
             return Vector(0, 0, 0), 0
         else:
             norm_x, norm_y, norm_z, length = 0, 0, 0, 1
-            if self.isincheck(nod):  # внутренние узлы (снаружи куба)
+            if self.isincheck(nod):  # внутренние узлы (снаружи параллелограмма)
                 # ищем вектор нормали к ближайшей границе (единичный) и расстояние
-                # для разных положений точки относительно куба:
+                # для разных положений точки относительно параллелограмма:
                 if ans5 and ans6:
                     length = abs(dx) - a / 2
                     norm_x = dx / abs(dx)
                     norm_y = 0
                     norm_z = 0
                 elif ans4 and ans6:
-                    length = abs(dy) - a / 2
+                    length = abs(dy) - b / 2
                     norm_x = 0
                     norm_y = dy / abs(dy)
                     norm_z = 0
                 elif ans4 and ans5:
-                    length = abs(dz) - a / 2
+                    length = abs(dz) - c / 2
                     norm_x = 0
                     norm_y = 0
                     norm_z = dz / abs(dz)
                 elif ans4 and not ans5 and not ans6:
-                    length = ((abs(dy) - a / 2) ** 2 + (abs(dz) - a / 2) ** 2) ** 0.5
+                    length = ((abs(dy) - b / 2) ** 2 + (abs(dz) - c / 2) ** 2) ** 0.5
                     norm_x = 0
-                    norm_y = (dy - self.lattice.sign_of_num(dy) * a / 2) / length
-                    norm_z = (dz - self.lattice.sign_of_num(dz) * a / 2) / length
+                    norm_y = (dy - self.lattice.sign_of_num(dy) * b / 2) / length
+                    norm_z = (dz - self.lattice.sign_of_num(dz) * c / 2) / length
                 elif ans5 and not ans4 and not ans6:
-                    length = ((abs(dx) - a / 2) ** 2 + (abs(dz) - a / 2) ** 2) ** 0.5
+                    length = ((abs(dx) - a / 2) ** 2 + (abs(dz) - c / 2) ** 2) ** 0.5
                     norm_x = (dx - self.lattice.sign_of_num(dx) * a / 2) / length
                     norm_y = 0
-                    norm_z = (dz - self.lattice.sign_of_num(dz) * a / 2) / length
+                    norm_z = (dz - self.lattice.sign_of_num(dz) * c / 2) / length
                 elif ans6 and not ans4 and not ans5:
-                    length = ((abs(dx) - a / 2) ** 2 + (abs(dy) - a / 2) ** 2) ** 0.5
+                    length = ((abs(dx) - a / 2) ** 2 + (abs(dy) - b / 2) ** 2) ** 0.5
                     norm_x = (dx - self.lattice.sign_of_num(dx) * a / 2) / length
-                    norm_y = (dy - self.lattice.sign_of_num(dy) * a / 2) / length
+                    norm_y = (dy - self.lattice.sign_of_num(dy) * b / 2) / length
                     norm_z = 0
                 elif not ans4 and not ans5 and not ans6:
-                    length = ((abs(dx) - a / 2) ** 2 + (abs(dy) - a / 2) ** 2 + (abs(dz) - a / 2) ** 2) ** 0.5
+                    length = ((abs(dx) - a / 2) ** 2 + (abs(dy) - b / 2) ** 2 + (abs(dz) - c / 2) ** 2) ** 0.5
                     norm_x = (dx - self.lattice.sign_of_num(dx) * a / 2) / length
-                    norm_y = (dy - self.lattice.sign_of_num(dy) * a / 2) / length
-                    norm_z = (dz - self.lattice.sign_of_num(dz) * a / 2) / length
+                    norm_y = (dy - self.lattice.sign_of_num(dy) * b / 2) / length
+                    norm_z = (dz - self.lattice.sign_of_num(dz) * c / 2) / length
                 # возвращаем вектор нормали и расстояние:
                 return Vector(norm_x, norm_y, norm_z), length
-            else:  # граничные узлы (внутри куба)
+            else:  # граничные узлы (внутри параллелограмма)
                 dx *= -1
                 dy *= -1
                 dz *= -1
-                an1 = abs(dx) >= abs(dy)
-                an2 = abs(dx) >= abs(dz)
-                an3 = abs(dy) >= abs(dx)
-                an4 = abs(dy) >= abs(dz)
-                an5 = abs(dz) >= abs(dx)
-                an6 = abs(dz) >= abs(dy)
+                an1 = (a / 2 - abs(dx)) <= (b / 2 - abs(dy))
+                an2 = (a / 2 - abs(dx)) <= (c / 2 - abs(dz))
+                an3 = (b / 2 - abs(dy)) <= (a / 2 - abs(dx))
+                an4 = (b / 2 - abs(dy)) <= (c / 2 - abs(dz))
+                an5 = (c / 2 - abs(dz)) <= (a / 2 - abs(dx))
+                an6 = (c / 2 - abs(dz)) <= (b / 2 - abs(dy))
                 if an1 and an2:
                     length = a / 2 - abs(dx)
                     norm_x = dx / abs(dx)
                     norm_y = 0
                     norm_z = 0
                 elif an3 and an4:
-                    length = a / 2 - abs(dy)
+                    length = b / 2 - abs(dy)
                     norm_x = 0
                     norm_y = dy / abs(dy)
                     norm_z = 0
                 elif an5 and an6:
-                    length = a / 2 - abs(dz)
+                    length = c / 2 - abs(dz)
                     norm_x = 0
                     norm_y = 0
                     norm_z = dz / abs(dz)
                 # возвращаем вектор нормали и расстояние:
                 return Vector(norm_x, norm_y, norm_z), length
-
-
-class Parallelepiped(Figure):
-    def __init__(self, centre=Point(0, 0, 0), size=None, lattice: Lattice = None):
-        super().__init__(lattice)
-        self.centre = centre
-        self.size = size
-
-    pass
 
 
 good_lattice = Lattice()
