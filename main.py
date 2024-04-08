@@ -53,6 +53,12 @@ class Vector:
         else:
             raise ValueError("Неподходящий тип данных для умножения на вектор")
 
+    def __truediv__(self, other):
+        if type(other) in (int, float):
+            return Vector(self.x / other, self.y / other, self.z / other)
+        else:
+            raise ValueError("Вектор можно поделить только на число")
+
     def __pow__(self, other):
         if type(other) is int and other > 0:
             out = 1
@@ -284,7 +290,7 @@ class Sphere(Figure):
     def nearbordercheck(self, nod: Point, v: Vector) -> float:
         # nod - координаты узла, v - базисный вектор
         """Определаяем, граничит ли данный узел с границей сферы
-         в пределах и направлении заданного вектора (расстояние - в единицах шага решётки).
+         в пределах и направлении заданного БАЗИСНОГО вектора (расстояние - в единицах шага решётки).
         Возвращает 0, если узел НЕ граничит в этом направлении,
         или лежит на границе (расстояние = 0).
         Если граничит - возвращает расстояние (по направлению базисного вектора)
@@ -317,7 +323,7 @@ class Sphere(Figure):
 
     def print_normal_and_distance(self, nod: Point):
         # nod - координаты узла
-        """Вычисляет вектор нормали к поверхности для сферы, затем возвращает его координаты и длину.
+        """Вычисляет вектор нормали от точки к поверхности для сферы, затем возвращает его координаты и длину.
         Если точка ровно на поверхности - возвращает нули"""
         delta = self.centre - nod
         length = delta.square_of_norm() ** 0.5
@@ -325,7 +331,7 @@ class Sphere(Figure):
             # возвращаем нулевые вектор нормали и расстояние:
             return Vector(0, 0, 0), 0
         else:
-            if length >= self.size:  # внутренние узлы (снаружи сферы)
+            if length > self.size:  # внутренние узлы (снаружи сферы)
                 # возвращаем вектор нормали и расстояние:
                 return Vector(delta.x / length, delta.y / length, delta.z / length), (length - self.size)
             else:  # граничные узлы (внутри сферы)
@@ -344,16 +350,63 @@ class Ellipsoid(Figure):
         """Определаяем внешний/внутренний ли узел по
         его координатам и координатам центра эллипсоида и её радиуса
         True, если узел внутренний (за пределами границы (либо на ней), внутри расчётной области)"""
-        a = self.size[0]
-        b = self.size[1]
-        c = self.size[2]
         delta = (nod - self.centre)
-        return delta.x ** 2 / a ** 2 + delta.y ** 2 / b ** 2 + delta.z ** 2 / c ** 2 >= 1
+        return delta.x ** 2 / self.size[0] ** 2 + delta.y ** 2 / self.size[1] ** 2 + delta.z ** 2 / self.size[
+            2] ** 2 >= 1
+
+    def intersection_with_line_calculate(self, k1, k2, a, b, c, p1: Point, p0: Point) -> tuple[Vector | None, float | None]:
+        """ Функция вычисляет ближайшую к точке p1 точку пересечения прямой и эллипсоида, если она есть, и возвращает
+        вектор от p1 до этой точки и расстояние от неё до p1 (длину вектора), либо None.
+        Коэффициенты k1 и k2 - из выражений преобразования координат в системе линейных уравнений
+        для пересечения эллипсоида и прямой:
+        (x - x1) = k1 * (y - y1)
+        (z - z1) = k2 * (y - y1)
+        (x - x0)**2 / a**2 + (y - y0)**2 / b**2 + (z - z0)**2 / c**2 - 1 = 0
+        Расчёты выполнены через координату y с последующей подстановкой в x и z.
+
+        a, b, c - коэффициенты из уравнения эллипсоида
+        p1 = Point(x1, y1, z1) - известная точка не на эллипсоиде, через которую проходит пересекающая эллипсоид прямая
+        p0 = Point(x0, y0, z0) - точка центра эллипсоида
+
+        ВАЖНО: при использовании функции, в зависимости от начальных условий, подставляемые в неё координаты точек
+        p0 и p1 и всех коэффициентов могут быть "перемешаны", т.е. x, y и z, а также аналогично a, b, и c фактически
+        будут поменяны местами. В силу симметричности задачи относительно осей координат, такое использование удобно и
+        сокращает код. В основном коде после обращения к этой функции тогда идёт обратная подмена координат, чтобы
+        вернуть верное соответствие значений осям.
+        Требуется такая "подмена", когда нужно избежать деления на ноль и выбрать ненулевую координату у базисного
+        вектора для дальнейших расчётов по ней."""
+        b1 = p1.x - k1 * p1.y
+        b2 = p1.z - k2 * p1.y
+        s1 = b1 - p0.x
+        s2 = b2 - p0.z
+        v = a ** 2 * b ** 2 * c ** 2
+        a_a = a ** 2 * c ** 2 + b ** 2 * c ** 2 * k1 ** 2 + a ** 2 * b ** 2 * k2 ** 2
+        b_b = 2 * (b ** 2 * c ** 2 * k1 * s1 + a ** 2 * b ** 2 * k2 * s2 - a ** 2 * c ** 2 * p0.y)
+        c_c = a ** 2 * c ** 2 * p0.y ** 2 + b ** 2 * c ** 2 * s1 ** 2 + a ** 2 * b ** 2 * s2 ** 2 - v
+        det = b_b ** 2 - 4 * a_a * c_c
+        # print(f'b1 = {b1}\nb2 = {b2}\ns1 = {s1}\ns2 = {s2}\nv = {v}\nA = {a_a}\nB = {b_b}\nC = {c_c}\nD = {det}')
+        if det < 0:
+            return None, None
+        else:
+            y_1 = (- b_b + det ** 0.5) / (2 * a_a)
+            x_1 = k1 * y_1 + b1
+            z_1 = k2 * y_1 + b2
+            norm1 = Point(x_1, y_1, z_1) - p1
+            square_dist1 = norm1.square_of_norm()
+            y_2 = (- b_b - det ** 0.5) / (2 * a_a)
+            x_2 = k1 * y_2 + b1
+            z_2 = k2 * y_2 + b2
+            norm2 = Point(x_2, y_2, z_2) - p1
+            square_dist2 = norm2.square_of_norm()
+            if square_dist1 < square_dist2:
+                return norm1, square_dist1 ** 0.5
+            else:
+                return norm2, square_dist2 ** 0.5
 
     def nearbordercheck(self, nod: Point, v: Vector) -> float:
         # nod - координаты узла, v - базисный вектор
         """Определаяем, граничит ли данный узел с границей эллипсоида
-         в пределах и направлении заданного вектора (расстояние - в единицах шага решётки).
+         в пределах и направлении заданного БАЗИСНОГО вектора (расстояние - в единицах шага решётки).
         Возвращает 0, если узел НЕ граничит в этом направлении,
         или лежит на границе (расстояние = 0).
         Если граничит - возвращает расстояние (по направлению базисного вектора)
@@ -364,45 +417,56 @@ class Ellipsoid(Figure):
         c = self.size[2]
         if delta.x ** 2 / a ** 2 + delta.y ** 2 / b ** 2 + delta.z ** 2 / c ** 2 == 1:
             return 0
+        p = Point(nod.x + v.x * self.lattice.incr[0], nod.y + v.y * self.lattice.incr[1],
+                  nod.z + v.z * self.lattice.incr[2])
         ans1 = self.isincheck(nod)
-        ans2 = self.isincheck(Point(nod.x + v.x * self.lattice.incr[0],
-                                    nod.y + v.y * self.lattice.incr[1],
-                                    nod.z + v.z * self.lattice.incr[2]))
+        ans2 = self.isincheck(p)
         if ans1 == ans2:  # если изначальная точка и ближайшая по базисному
             # вектору - по одну сторону границы, то возвращаем 0
             return 0
-        a_a = v.square_of_norm()
-        b_b = (v * delta) * 2
-        c_c = (delta * delta) - self.size ** 2
-        det = (b_b ** 2 - 4 * a_a * c_c)
-        if det >= 0:
-            d1 = (- b_b + det ** 0.5) / (2 * a_a)
-            d2 = (- b_b - det ** 0.5) / (2 * a_a)
-            if d1 >= 0 and d2 >= 0:
-                return min(d1, d2) * (a_a ** 0.5)
-            elif d1 >= 0 or d2 >= 0:
-                return max(d1, d2) * (a_a ** 0.5)
-            else:
-                return 0
+        if v.x != 0:
+            x1, y1, z1 = nod.y, nod.x, nod.z
+            x2, y2, z2 = p.y, p.x, p.z
+            a, b, c = b, a, c
+            p0 = Point(self.centre.y, self.centre.x, self.centre.z)
+        elif v.y != 0:
+            x1, y1, z1 = nod.x, nod.y, nod.z
+            x2, y2, z2 = p.x, p.y, p.z
+            p0 = self.centre
         else:
+            x1, y1, z1 = nod.x, nod.z, nod.y
+            x2, y2, z2 = p.x, p.z, p.y
+            a, b, c = a, c, b
+            p0 = Point(self.centre.x, self.centre.z, self.centre.y)
+        k1 = (x2 - x1) / (y2 - y1)
+        k2 = (z2 - z1) / (y2 - y1)
+        distance = self.intersection_with_line_calculate(k1, k2, a, b, c, Point(x1, y1, z1), p0)[1]
+        if distance is None:
             return 0
+        else:
+            return distance
 
     def print_normal_and_distance(self, nod: Point):
         # nod - координаты узла
-        """Вычисляет вектор нормали к поверхности для эллипсоида, затем возвращает его координаты и длину.
+        """Вычисляет вектор нормали от точки к поверхности для эллипсоида, затем возвращает его координаты и длину.
         Если точка ровно на поверхности - возвращает нули"""
+        # print("print_normal_and_distance")
+        # print((nod.x, nod.y, nod.z))
         delta = self.centre - nod
-        length = delta.square_of_norm() ** 0.5
-        if length == self.size:  # если узел лежит ровно на эллипсоиде
-            # возвращаем нулевые вектор нормали и расстояние:
+        a = self.size[0]
+        b = self.size[1]
+        c = self.size[2]
+        if delta.x ** 2 / a ** 2 + delta.y ** 2 / b ** 2 + delta.z ** 2 / c ** 2 == 1:
+            # если узел лежит ровно на эллипсоиде - возвращаем нулевые вектор нормали и расстояние:
             return Vector(0, 0, 0), 0
         else:
-            if length >= self.size:  # внутренние узлы (снаружи эллипсоида)
-                # возвращаем вектор нормали и расстояние:
-                return Vector(delta.x / length, delta.y / length, delta.z / length), (length - self.size)
-            else:  # граничные узлы (внутри эллипсоида)
-                # возвращаем вектор нормали и расстояние:
-                return Vector(-delta.x / length, -delta.y / length, -delta.z / length), (self.size - length)
+            k1 = a ** 2 / b ** 2
+            k2 = c ** 2 / b ** 2
+            normal, distance = self.intersection_with_line_calculate(k1, k2, a, b, c, nod, self.centre)
+            if normal is None:
+                return Vector(999, 999, 999), 999
+                # raise ArithmeticError("Не смог вычислить нормальный вектор от точки")
+            return normal / distance, distance
 
 
 class Parallelepiped(Figure):
@@ -423,7 +487,7 @@ class Parallelepiped(Figure):
     def nearbordercheck(self, nod: Point, v: Vector) -> float:
         # nod - координаты узла, v - базисный вектор
         """Определаяем, граничит ли данный узел с границей параллелограмма
-         в пределах и направлении заданного вектора (расстояние - в единицах шага решётки).
+         в пределах и направлении заданного БАЗИСНОГО вектора (расстояние - в единицах шага решётки).
         Возвращает 0, если узел НЕ граничит в этом направлении,
         или лежит на границе (расстояние = 0).
         Если граничит - возвращает расстояние (по направлению базисного вектора)
@@ -497,7 +561,7 @@ class Parallelepiped(Figure):
 
     def print_normal_and_distance(self, nod: Point):
         # nod - координаты узла
-        """Вычисляет вектор нормали к поверхности для параллелограмма, затем возвращает его координаты и длину.
+        """Вычисляет вектор нормали от точки к поверхности для параллелограмма, затем возвращает его координаты и длину.
         Если точка ровно на поверхности - возвращает нули"""
         dx = self.centre.x - nod.x
         dy = self.centre.y - nod.y
