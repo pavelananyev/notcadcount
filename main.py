@@ -1,10 +1,16 @@
+from decimal import *
+
+getcontext().prec = 30
+
+
 class Point:
-    def __init__(self, x, y=0, z=0):
-        if type(x) in (int, float) and type(y) in (int, float) and type(z) in (int, float):
+    def __init__(self, x, y: int | float | Decimal = 0, z: int | float | Decimal = 0):
+        if isinstance(x, (int, float, Decimal)) and isinstance(y, (int, float, Decimal)) and isinstance(z, (
+                int, float, Decimal)):
             self.x = x
             self.y = y
             self.z = z
-        elif type(x) in (tuple, list):  # если передаём точку готовым кортежем или списком координат
+        elif isinstance(x, (tuple, list)):  # если передаём точку готовым кортежем или списком координат
             self.x = x[0]
             self.y = x[1]
             self.z = x[2]
@@ -25,8 +31,9 @@ class Point:
 
 
 class Vector:
-    def __init__(self, x=0, y=0, z=0):
-        if type(x) in (int, float) and type(y) in (int, float) and type(z) in (int, float):
+    def __init__(self, x: int | float | Decimal = 0, y: int | float | Decimal = 0, z: int | float | Decimal = 0):
+        if isinstance(x, (int, float, Decimal)) and isinstance(y, (int, float, Decimal)) and isinstance(z, (
+                int, float, Decimal)):
             self.x = x
             self.y = y
             self.z = z
@@ -37,7 +44,7 @@ class Vector:
         x = self.x + other.x
         y = self.y + other.y
         z = self.z + other.z
-        return Point(x, y, z) if type(other) is Point else Vector(x, y, z)
+        return Point(x, y, z) if isinstance(other, Point) else Vector(x, y, z)
 
     def __sub__(self, other):
         x = self.x - other.x
@@ -48,19 +55,19 @@ class Vector:
     def __mul__(self, other):
         if isinstance(other, Vector):
             return self.x * other.x + self.y * other.y + self.z * other.z
-        elif type(other) in (int, float):
+        elif isinstance(other, (int, float, Decimal)):
             return Vector(self.x * other, self.y * other, self.z * other)
         else:
             raise ValueError("Неподходящий тип данных для умножения на вектор")
 
     def __truediv__(self, other):
-        if type(other) in (int, float):
+        if isinstance(other, (int, float, Decimal)):
             return Vector(self.x / other, self.y / other, self.z / other)
         else:
             raise ValueError("Вектор можно поделить только на число")
 
     def __pow__(self, other):
-        if type(other) is int and other > 0:
+        if isinstance(other, int) and other > 0:
             out = 1
             for _ in range(other):
                 out = self.__mul__(out)
@@ -117,27 +124,27 @@ class Lattice:
                     case 0:  # произвольная граница с заданием по точкам/аналитически
                         pass
                     case 1:  # сфера
-                        figure_centre, figure_size = t[:-1], t[-1] / 2  # координаты центра сферы
+                        figure_centre, figure_size = t[:3], t[-1] / 2  # координаты центра сферы
                         # и радиус сферы
                         print(f'СФЕРА с центром {figure_centre} и радиусом {figure_size}')
                         self.figure = Sphere(Point(figure_centre), figure_size, self)
 
                     case 2:  # эллипсоид
-                        figure_centre, figure_size = t[:-3], tuple(
-                            n / 2 for n in t[-3::])  # координаты центра эллипсоида
+                        figure_centre, figure_size = t[:3], tuple(
+                            n / 2 for n in t[3::])  # координаты центра эллипсоида
                         # и полуосей a, b, c
                         print(
                             f'ЭЛЛИПСОИД с центром {figure_centre} и полуосями {figure_size[0]}, {figure_size[1]},'
                             f' {figure_size[2]}')
                         self.figure = Ellipsoid(Point(figure_centre), figure_size, self)
                     case 3:  # куб
-                        figure_centre, figure_size = t[:-1], t[-1]  # координаты центра куба
+                        figure_centre, figure_size = t[:3], t[-1]  # координаты центра куба
                         # и длина ребра куба
                         print(f'КУБ с центром {figure_centre} и ребром {figure_size}')
                         self.figure = Parallelepiped(Point(figure_centre), (figure_size, figure_size, figure_size),
                                                      self)
                     case 4:  # параллелепипед
-                        figure_centre, figure_size = t[:-3], tuple(t[-3::])  # координаты центра параллелепипеда
+                        figure_centre, figure_size = t[:3], tuple(t[3::])  # координаты центра параллелепипеда
                         # и длины рёбер a, b, c
                         print(
                             f'ПАРАЛЛЕЛЕПИПЕД с центром {figure_centre} и рёбрами {figure_size[0]}, {figure_size[1]},'
@@ -354,7 +361,8 @@ class Ellipsoid(Figure):
         return delta.x ** 2 / self.size[0] ** 2 + delta.y ** 2 / self.size[1] ** 2 + delta.z ** 2 / self.size[
             2] ** 2 >= 1
 
-    def intersection_with_line_calculate(self, k1, k2, a, b, c, p1: Point, p0: Point) -> tuple[Vector | None, float | None]:
+    def intersection_with_line_calculate(self, k1: Decimal, k2: Decimal, a: Decimal, b: Decimal, c: Decimal, p1: Point,
+                                         p0: Point) -> tuple[Vector | None, Decimal | None]:
         """ Функция вычисляет ближайшую к точке p1 точку пересечения прямой и эллипсоида, если она есть, и возвращает
         вектор от p1 до этой точки и расстояние от неё до p1 (длину вектора), либо None.
         Коэффициенты k1 и k2 - из выражений преобразования координат в системе линейных уравнений
@@ -375,33 +383,38 @@ class Ellipsoid(Figure):
         вернуть верное соответствие значений осям.
         Требуется такая "подмена", когда нужно избежать деления на ноль и выбрать ненулевую координату у базисного
         вектора для дальнейших расчётов по ней."""
-        b1 = p1.x - k1 * p1.y
-        b2 = p1.z - k2 * p1.y
-        s1 = b1 - p0.x
-        s2 = b2 - p0.z
-        v = a ** 2 * b ** 2 * c ** 2
-        a_a = a ** 2 * c ** 2 + b ** 2 * c ** 2 * k1 ** 2 + a ** 2 * b ** 2 * k2 ** 2
-        b_b = 2 * (b ** 2 * c ** 2 * k1 * s1 + a ** 2 * b ** 2 * k2 * s2 - a ** 2 * c ** 2 * p0.y)
-        c_c = a ** 2 * c ** 2 * p0.y ** 2 + b ** 2 * c ** 2 * s1 ** 2 + a ** 2 * b ** 2 * s2 ** 2 - v
+        b1 = Decimal(p1.x) - k1 * Decimal(p1.y)
+        b2 = Decimal(p1.z) - k2 * Decimal(p1.y)
+        s1 = b1 - Decimal(p0.x)
+        s2 = b2 - Decimal(p0.z)
+        v = (a * b * c) ** 2
+        a_a = (a * c) ** 2 + (b * c * k1) ** 2 + (a * b * k2) ** 2
+        b_b = 2 * (((b * c) ** 2) * k1 * s1 + ((a * b) ** 2) * k2 * s2 - ((a * c) ** 2) * Decimal(p0.y))
+        c_c = (a * c * Decimal(p0.y)) ** 2 + (b * c * s1) ** 2 + (a * b * s2) ** 2 - v
         det = b_b ** 2 - 4 * a_a * c_c
-        # print(f'b1 = {b1}\nb2 = {b2}\ns1 = {s1}\ns2 = {s2}\nv = {v}\nA = {a_a}\nB = {b_b}\nC = {c_c}\nD = {det}')
-        if det < 0:
+        print(
+            f'b1 = {b1}\nb2 = {b2}\ns1 = {s1}\ns2 = {s2}\nv = {v}\nA = {a_a}\nB = {b_b}\nC = {c_c}\nD = {det}\nNod = {p1.x, p1.y, p1.z}')
+        if det < Decimal('0'):
             return None, None
         else:
-            y_1 = (- b_b + det ** 0.5) / (2 * a_a)
+            y_1 = (- b_b + det ** Decimal(0.5)) / (2 * a_a)
             x_1 = k1 * y_1 + b1
             z_1 = k2 * y_1 + b2
-            norm1 = Point(x_1, y_1, z_1) - p1
+            norm1 = Point(x_1, y_1, z_1) - Point(Decimal(p1.x), Decimal(p1.y), Decimal(p1.z))
             square_dist1 = norm1.square_of_norm()
-            y_2 = (- b_b - det ** 0.5) / (2 * a_a)
+            print(x_1, y_1, z_1, norm1, square_dist1)
+            y_2 = (- b_b - det ** Decimal(0.5)) / (2 * a_a)
             x_2 = k1 * y_2 + b1
             z_2 = k2 * y_2 + b2
-            norm2 = Point(x_2, y_2, z_2) - p1
+            norm2 = Point(x_2, y_2, z_2) - Point(Decimal(p1.x), Decimal(p1.y), Decimal(p1.z))
             square_dist2 = norm2.square_of_norm()
+            print(x_2, y_2, z_2, norm2, square_dist2)
             if square_dist1 < square_dist2:
-                return norm1, square_dist1 ** 0.5
+                print(f'norm = {norm1.x, norm1.y, norm1.z}, dist = {square_dist1 ** Decimal(0.5)}')
+                return norm1, square_dist1 ** Decimal(0.5)
             else:
-                return norm2, square_dist2 ** 0.5
+                print(f'norm = {norm2.x, norm2.y, norm2.z}, dist = {square_dist2 ** Decimal(0.5)}')
+                return norm2, square_dist2 ** Decimal(0.5)
 
     def nearbordercheck(self, nod: Point, v: Vector) -> float:
         # nod - координаты узла, v - базисный вектор
@@ -412,10 +425,11 @@ class Ellipsoid(Figure):
         Если граничит - возвращает расстояние (по направлению базисного вектора)
         в пределах расстояния между узлами в этом направлении."""
         delta = nod - self.centre
-        a = self.size[0]
-        b = self.size[1]
-        c = self.size[2]
-        if delta.x ** 2 / a ** 2 + delta.y ** 2 / b ** 2 + delta.z ** 2 / c ** 2 == 1:
+        a = Decimal(self.size[0])
+        b = Decimal(self.size[1])
+        c = Decimal(self.size[2])
+        if (Decimal(delta.x) ** 2 / a ** 2 + Decimal(delta.y) ** 2 / b ** 2 + Decimal(
+                delta.z) ** 2 / c ** 2) == Decimal('1'):
             return 0
         p = Point(nod.x + v.x * self.lattice.incr[0], nod.y + v.y * self.lattice.incr[1],
                   nod.z + v.z * self.lattice.incr[2])
@@ -438,13 +452,13 @@ class Ellipsoid(Figure):
             x2, y2, z2 = p.x, p.z, p.y
             a, b, c = a, c, b
             p0 = Point(self.centre.x, self.centre.z, self.centre.y)
-        k1 = (x2 - x1) / (y2 - y1)
-        k2 = (z2 - z1) / (y2 - y1)
+        k1 = (Decimal(x2) - Decimal(x1)) / (Decimal(y2) - Decimal(y1))
+        k2 = (Decimal(z2) - Decimal(z1)) / (Decimal(y2) - Decimal(y1))
         distance = self.intersection_with_line_calculate(k1, k2, a, b, c, Point(x1, y1, z1), p0)[1]
         if distance is None:
             return 0
         else:
-            return distance
+            return float(distance)
 
     def print_normal_and_distance(self, nod: Point):
         # nod - координаты узла
@@ -453,20 +467,23 @@ class Ellipsoid(Figure):
         # print("print_normal_and_distance")
         # print((nod.x, nod.y, nod.z))
         delta = self.centre - nod
-        a = self.size[0]
-        b = self.size[1]
-        c = self.size[2]
-        if delta.x ** 2 / a ** 2 + delta.y ** 2 / b ** 2 + delta.z ** 2 / c ** 2 == 1:
+        a = Decimal(self.size[0])
+        b = Decimal(self.size[1])
+        c = Decimal(self.size[2])
+        if (Decimal(delta.x) ** 2 / a ** 2 + Decimal(delta.y) ** 2 / b ** 2 + Decimal(
+                delta.z) ** 2 / c ** 2) == Decimal('1'):
             # если узел лежит ровно на эллипсоиде - возвращаем нулевые вектор нормали и расстояние:
             return Vector(0, 0, 0), 0
         else:
-            k1 = a ** 2 / b ** 2
-            k2 = c ** 2 / b ** 2
+            k1 = (a / b) ** 2
+            k2 = (c / b) ** 2
             normal, distance = self.intersection_with_line_calculate(k1, k2, a, b, c, nod, self.centre)
             if normal is None:
                 return Vector(999, 999, 999), 999
                 # raise ArithmeticError("Не смог вычислить нормальный вектор от точки")
-            return normal / distance, distance
+            normal = Vector(float(normal.x / distance), float(normal.y / distance), float(normal.z / distance))
+            distance = float(distance)
+            return normal, distance
 
 
 class Parallelepiped(Figure):
