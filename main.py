@@ -110,7 +110,7 @@ class Lattice:
     def get_input(self):
         """Достаём все параметры из входного файла"""
         try:
-            with open("input.txt", encoding='utf-8') as file:
+            with open(self.path_in, encoding='utf-8') as file:
                 lines = file.readlines()
                 self.minmaxcoord = tuple(map(float, lines[0].split(';')))  # крайние
                 # координаты (мин, макс) области вычислений по осям координат
@@ -161,12 +161,15 @@ class Lattice:
             # На данный момент узел решётки совпадает с центром фигуры границы
             # и откладывается от него до границ области вычислений.
             centre = (self.figure.centre.x, self.figure.centre.y, self.figure.centre.z)
-            if not n % 2:
-                self.num_of_nodes.append(
-                    int(abs((self.minmaxcoord[n] - centre[n // 2]) / self.incr[n // 2])))
-            else:
-                self.num_of_nodes.append(
-                    int(abs((self.minmaxcoord[n] - centre[n // 2]) / self.incr[n // 2])))
+            self.num_of_nodes.append(
+                int(abs((self.minmaxcoord[n] - centre[n // 2]) / self.incr[n // 2])))
+            # Кажется это лишнее (упростил выше без if/else):
+            # if not n % 2:
+            #     self.num_of_nodes.append(
+            #         int(abs((self.minmaxcoord[n] - centre[n // 2]) / self.incr[n // 2])))
+            # else:
+            #     self.num_of_nodes.append(
+            #         int(abs((self.minmaxcoord[n] - centre[n // 2]) / self.incr[n // 2])))
         self.Nx = self.num_of_nodes[0] + self.num_of_nodes[1] + 1
         self.Ny = self.num_of_nodes[2] + self.num_of_nodes[3] + 1
         self.Nz = self.num_of_nodes[4] + self.num_of_nodes[5] + 1
