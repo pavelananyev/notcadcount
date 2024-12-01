@@ -163,13 +163,6 @@ class Lattice:
             centre = (self.figure.centre.x, self.figure.centre.y, self.figure.centre.z)
             self.num_of_nodes.append(
                 int(abs((self.minmaxcoord[n] - centre[n // 2]) / self.incr[n // 2])))
-            # Кажется это лишнее (упростил выше без if/else):
-            # if not n % 2:
-            #     self.num_of_nodes.append(
-            #         int(abs((self.minmaxcoord[n] - centre[n // 2]) / self.incr[n // 2])))
-            # else:
-            #     self.num_of_nodes.append(
-            #         int(abs((self.minmaxcoord[n] - centre[n // 2]) / self.incr[n // 2])))
         self.Nx = self.num_of_nodes[0] + self.num_of_nodes[1] + 1
         self.Ny = self.num_of_nodes[2] + self.num_of_nodes[3] + 1
         self.Nz = self.num_of_nodes[4] + self.num_of_nodes[5] + 1
@@ -192,13 +185,16 @@ class Lattice:
                 # направлению
                 file.write(f'{self.Nx};{self.Ny};{self.Nz}\n')  # количество узлов по каждой оси
 
-                # Количество внутренних узлов, и далее через ; количество узлов
-                # для каждой из границ расчётной области
-                # ТАКЖЕ в этом блоке сохраняются все внешние и граничные узлы в виде списка кортежей их координат,
-                # и распределяются по этим группам
+                # Количество внутренних узлов (без крайних граничных узлов), и далее через ; количество узлов
+                # для каждой из границ расчётной области. Сначала идут граничные узлы вдоль поверхности (они являются
+                # внешними, лежат уже внутри поверхности), потом крайние узлы расчётной области (они внутренние).
+
+                # В этом блоке отсекаются все внешние узлы и сохраняются внешние граничные узлы внутри поверхности,
+                # в виде списка кортежей их координат. И распределяются по этим группам.
                 nums = [0, 0, self.Ny * self.Nz, self.Ny * self.Nz, self.Nx * self.Nz, self.Nx * self.Nz,
                         self.Nx * self.Ny, self.Nx * self.Ny]
                 self.nods_to_write = [[] for _ in range(8)]
+                zzz = 0
                 for k in range(1, self.Nz - 1):  # убираем из циклов крайние значения - узлы границ
                     # расчётных областей, т.к. они отдельно ниже генерируются
                     z = self.z_min + k * self.incr[2]
@@ -212,6 +208,9 @@ class Lattice:
                             elif self.figure.isbordercheck(Point(x, y, z)):
                                 nums[1] += 1
                                 self.nods_to_write[1].append((i, j, k))
+                            else:
+                                zzz += 1
+                print('Внутренних узлов поверхности:', zzz)
                 # Количество внутренних узлов записываем:
                 file.write(f'{nums[0]}')
                 # и количество граничных узлов записываем:
@@ -242,7 +241,7 @@ class Lattice:
                 #     Идентификатор узла определяется id = i + (j + k * Ny) * Nx,
                 #     сначала список узлов внутренних, потом по очереди всех границ
                 for n in range(8):
-                    # сначала для внутренних узлов считаем и записываем (n=0), затем для граничных узлов фигуры (n=1),
+                    # сначала для внутренних узлов считаем и записываем (n=0), затем для граничных узлов поверхности (n=1),
                     # затем для границ расчётной области (n > 1):
                     for i, j, k in self.nods_to_write[n]:
                         id_ = i + (j + k * self.Ny) * self.Nx
