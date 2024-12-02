@@ -98,7 +98,7 @@ class Lattice:
         self.Ny = None
         self.Nx = None
         self.num_of_nodes = None
-        self.minmaxcoord = None
+        self.minmax_coord = None
         self.incr = None
         self.border_type = None
         self.figure = None
@@ -112,9 +112,9 @@ class Lattice:
         try:
             with open(self.path_in, encoding='utf-8') as file:
                 lines = file.readlines()
-                self.minmaxcoord = tuple(map(float, lines[0].split(';')))  # крайние
+                self.minmax_coord = tuple(map(float, lines[0].split(';')))  # крайние
                 # координаты (мин, макс) области вычислений по осям координат
-                print('Крайние координаты (мин, макс) области вычислений: ', self.minmaxcoord)
+                print('Крайние координаты (мин, макс) области вычислений: ', self.minmax_coord)
                 self.incr = tuple(map(float, lines[1].split(';')))  # шаги решётки по осям координат
                 print('Шаги решётки по осям координат: ', self.incr)
                 self.border_type = int(lines[2].strip())  # тип фигуры для задания границы
@@ -162,7 +162,7 @@ class Lattice:
             # и откладывается от него до границ области вычислений.
             centre = (self.figure.centre.x, self.figure.centre.y, self.figure.centre.z)
             self.num_of_nodes.append(
-                int(abs((self.minmaxcoord[n] - centre[n // 2]) / self.incr[n // 2])))
+                int(abs((self.minmax_coord[n] - centre[n // 2]) / self.incr[n // 2])))
         self.Nx = self.num_of_nodes[0] + self.num_of_nodes[1] + 1
         self.Ny = self.num_of_nodes[2] + self.num_of_nodes[3] + 1
         self.Nz = self.num_of_nodes[4] + self.num_of_nodes[5] + 1
@@ -272,7 +272,7 @@ class Figure:
                                   "переопределён метод isincheck()")
 
     def isbordercheck(self, nod: Point):
-        # nod - координаты внешнего узла (вне расчётной области, внутри поверхности)
+        # node - координаты внешнего узла (вне расчётной области, внутри поверхности)
         """Определаяем, граничит ли внешний узел с границей поверхности
         (а значит с внутренним узлом) хотя бы по одному базисному вектору в пределах шага решётки;
         True, если узел граничит с поверхностью"""
@@ -292,14 +292,14 @@ class Sphere(Figure):
         self.size = size
 
     def isincheck(self, nod: Point):
-        # nod - координаты узла
+        # node - координаты узла
         """Определаяем внешний/внутренний ли узел по
         его координатам и координатам центра сферы и её радиуса
         True, если узел внутренний (за пределами границы (либо на ней), внутри расчётной области)"""
         return (nod - self.centre).square_of_norm() >= self.size ** 2
 
     def nearbordercheck(self, nod: Point, v: Vector) -> float:
-        # nod - координаты узла, v - базисный вектор
+        # node - координаты узла, v - базисный вектор
         """Определаяем, граничит ли данный узел с границей сферы
          в пределах и направлении заданного БАЗИСНОГО вектора (расстояние - в единицах шага решётки).
         Возвращает 0, если узел НЕ граничит в этом направлении,
@@ -333,7 +333,7 @@ class Sphere(Figure):
             return 0
 
     def print_normal_and_distance(self, nod: Point):
-        # nod - координаты узла
+        # node - координаты узла
         """Вычисляет вектор нормали от точки к поверхности для сферы, затем возвращает его координаты и длину.
         Если точка ровно на поверхности - возвращает нули"""
         delta = self.centre - nod
@@ -357,7 +357,7 @@ class Ellipsoid(Figure):
         self.size = size
 
     def isincheck(self, nod: Point):
-        # nod - координаты узла
+        # node - координаты узла
         """Определаяем внешний/внутренний ли узел по
         его координатам и координатам центра эллипсоида и её радиуса
         True, если узел внутренний (за пределами границы (либо на ней), внутри расчётной области)"""
@@ -421,7 +421,7 @@ class Ellipsoid(Figure):
                 return norm2, square_dist2 ** Decimal(0.5)
 
     def nearbordercheck(self, nod: Point, v: Vector) -> float:
-        # nod - координаты узла, v - базисный вектор
+        # node - координаты узла, v - базисный вектор
         """Определаяем, граничит ли данный узел с границей эллипсоида
          в пределах и направлении заданного БАЗИСНОГО вектора (расстояние - в единицах шага решётки).
         Возвращает 0, если узел НЕ граничит в этом направлении,
@@ -465,11 +465,11 @@ class Ellipsoid(Figure):
             return float(distance)
 
     def print_normal_and_distance(self, nod: Point):
-        # nod - координаты узла
+        # node - координаты узла
         """Вычисляет вектор нормали от точки к поверхности для эллипсоида, затем возвращает его координаты и длину.
         Если точка ровно на поверхности - возвращает нули"""
         # print("print_normal_and_distance")
-        # print((nod.x, nod.y, nod.z))
+        # print((node.x, node.y, node.z))
         delta = self.centre - nod
         a = Decimal(self.size[0])
         b = Decimal(self.size[1])
@@ -497,7 +497,7 @@ class Parallelepiped(Figure):
         self.size = size
 
     def isincheck(self, nod: Point):
-        # nod - координаты узла
+        # node - координаты узла
         """ Определаяем внутренний/внешний ли узел по
         его координатам и координатам центра параллелограмма и размеру его грани
         True, если узел внутренний (за пределами границы (либо на ней), внутри расчётной области)"""
@@ -506,7 +506,7 @@ class Parallelepiped(Figure):
                 abs(nod.z - self.centre.z) >= self.size[2] / 2)
 
     def nearbordercheck(self, nod: Point, v: Vector) -> float:
-        # nod - координаты узла, v - базисный вектор
+        # node - координаты узла, v - базисный вектор
         """Определаяем, граничит ли данный узел с границей параллелограмма
          в пределах и направлении заданного БАЗИСНОГО вектора (расстояние - в единицах шага решётки).
         Возвращает 0, если узел НЕ граничит в этом направлении,
@@ -581,7 +581,7 @@ class Parallelepiped(Figure):
         return distance
 
     def print_normal_and_distance(self, nod: Point):
-        # nod - координаты узла
+        # node - координаты узла
         """Вычисляет вектор нормали от точки к поверхности для параллелограмма, затем возвращает его координаты и длину.
         Если точка ровно на поверхности - возвращает нули"""
         dx = self.centre.x - nod.x
