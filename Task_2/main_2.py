@@ -87,7 +87,7 @@ class Lattice:
                    (0, -1, -1), (1, 1, 1), (-1, 1, 1), (1, -1, 1), (-1, -1, 1), (1, 1, -1), (-1, 1, -1), (1, -1, -1),
                    (-1, -1, -1)))
 
-    def __init__(self, path_in='input.txt', path_out='output.txt'):
+    def __init__(self, path_in='input.txt', path_out='output/output.txt'):
         self.path_in = path_in
         self.path_out = path_out
         self.nodes_to_write = None
