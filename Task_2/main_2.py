@@ -94,10 +94,11 @@ class Lattice:
         self.lattice_num = None
         self.nums = None
 
-    def lattice_generator(self):
+    def lattice_generator(self, lattices_):
         """Вычисление количества и генерация узлов решётки в соответствии с параметрами,
         с отсевом и сортировкой по разным категориям"""
         print(f'Вложенность решётки: {nested_lattice_quantity}')
+        # xyz_borders = [0, 0, 0, 0, 0, 0] # прямоугольные границы данного уровня решётки
         if nested_lattice_quantity == 0:
             self.num_of_nodes = []
             for n in range(6):  # вычисляем и складываем количество узлов
@@ -105,8 +106,7 @@ class Lattice:
                 # На данный момент узел решётки совпадает с центром фигуры границы
                 # и откладывается от него до границ области вычислений + 2 узла на внешние границы.
                 centre = (figure.centre.x, figure.centre.y, figure.centre.z)
-                self.num_of_nodes.append(
-                    int(abs((minmax_coord[n] - centre[n // 2]) / incr[n // 2])))
+                self.num_of_nodes.append(int(abs((minmax_coord[n] - centre[n // 2]) / incr[n // 2])))
             self.Nx = self.num_of_nodes[0] + self.num_of_nodes[1] + 1 + 2  # + 2 это на внешние границы добавили
             self.Ny = self.num_of_nodes[2] + self.num_of_nodes[3] + 1 + 2  # + 2 это на внешние границы добавили
             self.Nz = self.num_of_nodes[4] + self.num_of_nodes[5] + 1 + 2  # + 2 это на внешние границы добавили
@@ -144,11 +144,15 @@ class Lattice:
             print('Не граничных узлов внутри поверхности :', inside_out_nds)
             sum1 = self.Nx * self.Ny * self.Nz
             sum2 = sum(self.nums) + inside_out_nds
-            print(f'____________________________ПРОВЕРКА \"ЦЕЛОСТНОСТИ\" сетка №{self.lattice_num}___________________________\n'
-                  f'узлов посчитано: {self.Nx} * {self.Ny} * {self.Nz} = {sum1}\n'
-                  f'узлов создано: {self.nums[0]} + {inside_out_nds} + {self.nums[1]} + {self.nums[2]} + {self.nums[3]}'
-                  f' + {self.nums[4]} + {self.nums[5]} + {self.nums[6]} + {self.nums[7]} = {sum2}\n'
-                  f'......................................................................................')
+            print(
+                f'_______________________________ПРОВЕРКА \"ЦЕЛОСТНОСТИ\" сетка №{self.lattice_num}'
+                f'______________________________\n'
+                f'узлов посчитано: {self.Nx} * {self.Ny} * {self.Nz} = {sum1}\n'
+                f'узлов создано: {self.nums[0]} + {inside_out_nds} + {self.nums[1]} + {self.nums[2]} + {self.nums[3]}'
+                f' + {self.nums[4]} + {self.nums[5]} + {self.nums[6]} + {self.nums[7]} = {sum2}\n'
+                f'............................................................................................')
+        else:
+            pass
         if self.lattice_num == 0:
             # генерируем узлы границ расчётных областей (внешние узлы на границе с расчётной областью)
             for k in range(self.Nz):
@@ -163,6 +167,9 @@ class Lattice:
                 for i in range(1, self.Nx - 1):
                     self.nodes_to_write[6].append((i, j, 0))
                     self.nodes_to_write[7].append((i, j, self.Nz - 1))
+
+        if self.lattice_num < nested_lattice_quantity:
+            lattices_.append(lattices_[-1])
 
     def create_outfile(self, j: int):
         """Вызываем все функции, делаем вычисления и записываем в файл"""
@@ -218,7 +225,7 @@ class Lattice:
                         counter += 1
                 print(f'Записалось узлов в выходном файле:  {counter + 4} - 4 = {counter}\n'
                       f'Должно совпасть с суммой узлов без \"не граничных внутри поверхности\": {sum(self.nums)}\n'
-                      f'______________________________________________________________________________________')
+                      f'____________________________________________________________________________________________')
         except Exception as error:
             print(f'Ошибка при создании выходного файла:\n{error}')
 
@@ -685,11 +692,10 @@ def get_input():
 
 def lattice_compiling():
     """Функция запускает всё необходимое для обработки данных и генерации выходного файла"""
-    lattices = []
+    lattices = [Lattice()]
     for i in range(nested_lattice_quantity + 1):
-        lattices.append(Lattice())
         lattices[i].lattice_num = i
-        lattices[i].lattice_generator()
+        lattices[i].lattice_generator(lattices)
         lattices[i].create_outfile(i)
         # lattice = Lattice()
         # lattice.lattice_num = i
