@@ -80,16 +80,8 @@ class Vector:
 
 
 class Lattice:
-    BASIS = tuple(Vector(v[0], v[1], v[2]) for v in
-                  ((1, 0, 0), (-1, 0, 0), (0, 1, 0), (0, -1, 0), (0, 0, 1), (0, 0, -1), (1, 1, 0), (-1, 1, 0),
-                   (1, -1, 0),
-                   (-1, -1, 0), (1, 0, 1), (-1, 0, 1), (1, 0, -1), (-1, 0, -1), (0, 1, 1), (0, -1, 1), (0, 1, -1),
-                   (0, -1, -1), (1, 1, 1), (-1, 1, 1), (1, -1, 1), (-1, -1, 1), (1, 1, -1), (-1, 1, -1), (1, -1, -1),
-                   (-1, -1, -1)))
-
-    def __init__(self, path_in='input.txt', path_out='output/output.txt'):
-        self.path_in = path_in
-        self.path_out = path_out
+    def __init__(self, ):
+        self.fgr = None
         self.nodes_to_write = None
         self.z_min = None
         self.y_min = None
@@ -98,150 +90,93 @@ class Lattice:
         self.Ny = None
         self.Nx = None
         self.num_of_nodes = None
-        self.minmax_coord = None
-        self.incr = None
         self.border_type = None
-        self.figure = None
-        self.nested_lattice_quantity = None
-        self.nested_lattice_width = None
         self.lattice_num = None
         self.nums = None
-
-    @staticmethod
-    def sign_of_num(x: float):
-        return 0 if abs(x) == 0 else int(x / abs(x))
-
-    def get_input(self):
-        """Достаём все параметры из входного файла"""
-        try:
-            with open(self.path_in, encoding='utf-8') as file:
-                lines = file.readlines()
-                self.minmax_coord = tuple(map(float, lines[0].split(';')))  # крайние
-                # координаты (мин, макс) области вычислений по осям координат
-                print('Крайние координаты (мин, макс) области вычислений: ', self.minmax_coord)
-                self.incr = tuple(map(float, lines[1].split(';')))  # шаги решётки по осям координат
-                print('Шаги решётки по осям координат: ', self.incr)
-                self.border_type = int(lines[2].strip())  # тип фигуры для задания границы
-                # вытаскиваем параметры для каждого типа фигуры
-                t = tuple(map(float, lines[3].split(';')))
-                # вытаскиваем параметры для вложенных решёток
-                self.nested_lattice_quantity, self.nested_lattice_width = map(int, lines[4].split(';'))
-                match self.border_type:
-                    case 0:  # произвольная граница с заданием по точкам/аналитически
-                        pass
-                    case 1:  # сфера
-                        figure_centre, figure_size = t[:3], t[-1] / 2  # координаты центра сферы
-                        # и радиус сферы
-                        print(f'СФЕРА с центром {figure_centre} и радиусом {figure_size}')
-                        self.figure = Sphere(Point(figure_centre), figure_size, self)
-
-                    case 2:  # эллипсоид
-                        figure_centre, figure_size = t[:3], tuple(
-                            n / 2 for n in t[3::])  # координаты центра эллипсоида
-                        # и полуосей a, b, c
-                        print(
-                            f'ЭЛЛИПСОИД с центром {figure_centre} и полуосями {figure_size[0]}, {figure_size[1]},'
-                            f' {figure_size[2]}')
-                        self.figure = Ellipsoid(Point(figure_centre), figure_size, self)
-                    case 3:  # куб
-                        figure_centre, figure_size = t[:3], t[-1]  # координаты центра куба
-                        # и длина ребра куба
-                        print(f'КУБ с центром {figure_centre} и ребром {figure_size}')
-                        self.figure = Parallelepiped(Point(figure_centre), (figure_size, figure_size, figure_size),
-                                                     self)
-                    case 4:  # параллелепипед
-                        figure_centre, figure_size = t[:3], tuple(t[3::])  # координаты центра параллелепипеда
-                        # и длины рёбер a, b, c
-                        print(
-                            f'ПАРАЛЛЕЛЕПИПЕД с центром {figure_centre} и рёбрами {figure_size[0]}, {figure_size[1]},'
-                            f' {figure_size[2]}')
-                        self.figure = Parallelepiped(Point(figure_centre), figure_size, self)
-        except Exception as error:
-            print(f'Неверный формат входного файла:\n{error}')
 
     def lattice_generator(self):
         """Вычисление количества и генерация узлов решётки в соответствии с параметрами,
         с отсевом и сортировкой по разным категориям"""
-        print(f'Вложенность решётки: {self.nested_lattice_quantity}')
-        if self.nested_lattice_quantity == 0:
+        print(f'Вложенность решётки: {nested_lattice_quantity}')
+        if nested_lattice_quantity == 0:
             self.num_of_nodes = []
             for n in range(6):  # вычисляем и складываем количество узлов
                 # по разные стороны центра фигуры границы, для каждой оси.
                 # На данный момент узел решётки совпадает с центром фигуры границы
-                # и откладывается от него до границ области вычислений.
-                centre = (self.figure.centre.x, self.figure.centre.y, self.figure.centre.z)
+                # и откладывается от него до границ области вычислений + 2 узла на внешние границы.
+                centre = (figure.centre.x, figure.centre.y, figure.centre.z)
                 self.num_of_nodes.append(
-                    int(abs((self.minmax_coord[n] - centre[n // 2]) / self.incr[n // 2])))
-            self.Nx = self.num_of_nodes[0] + self.num_of_nodes[1] + 1
-            self.Ny = self.num_of_nodes[2] + self.num_of_nodes[3] + 1
-            self.Nz = self.num_of_nodes[4] + self.num_of_nodes[5] + 1
+                    int(abs((minmax_coord[n] - centre[n // 2]) / incr[n // 2])))
+            self.Nx = self.num_of_nodes[0] + self.num_of_nodes[1] + 1 + 2  # + 2 это на внешние границы добавили
+            self.Ny = self.num_of_nodes[2] + self.num_of_nodes[3] + 1 + 2  # + 2 это на внешние границы добавили
+            self.Nz = self.num_of_nodes[4] + self.num_of_nodes[5] + 1 + 2  # + 2 это на внешние границы добавили
 
             # Координаты левого нижнего узла решётки - граничного
             # внешнего узла за пределами расчётной области (координаты узла по каждому направлению Ox, Oy, Oz)
             # координаты внутренних узлов на 1 шаг ближе к центру по соответствующим координатам и находятся
             # скраю расчетной области
-            self.x_min = self.figure.centre.x - (self.num_of_nodes[0] + 1) * self.incr[0]
-            self.y_min = self.figure.centre.y - (self.num_of_nodes[2] + 1) * self.incr[1]
-            self.z_min = self.figure.centre.z - (self.num_of_nodes[4] + 1) * self.incr[2]
+            self.x_min = figure.centre.x - (self.num_of_nodes[0] + 1) * incr[0]
+            self.y_min = figure.centre.y - (self.num_of_nodes[2] + 1) * incr[1]
+            self.z_min = figure.centre.z - (self.num_of_nodes[4] + 1) * incr[2]
 
             # В этом блоке отсекаются все внешние узлы и сохраняются внешние граничные узлы внутри поверхности,
             # в виде списка кортежей их координат. И распределяются по этим группам.
-            self.nums = [0, 0, (self.Ny + 2) * (self.Nz + 2), (self.Ny + 2) * (self.Nz + 2), self.Nx * (self.Nz + 2),
-                         self.Nx * (self.Nz + 2), self.Nx * self.Ny, self.Nx * self.Ny]
+            self.nums = [0, 0, self.Ny * self.Nz, self.Ny * self.Nz, (self.Nx - 2) * self.Nz,
+                         (self.Nx - 2) * self.Nz, (self.Nx - 2) * (self.Ny - 2), (self.Nx - 2) * (self.Ny - 2)]
             self.nodes_to_write = [[] for _ in range(8)]
-            inside_out_nodes = 0
-            for k in range(1, self.Nz + 1):  # генерируем узлы в расчётной области, сюда входит и то, что внутри
+            inside_out_nds = 0
+            for k in range(1, self.Nz - 1):  # генерируем узлы в расчётной области, сюда входит и то, что внутри
                 # поверхности. Оно в процессе отсеивается, или идёт в границу расчётной области у поверхности.
                 # убираем из циклов крайние значения - узлы внешних границ решётки,т.к. они отдельно ниже генерируются
-                z = self.z_min + k * self.incr[2]
-                for j in range(1, self.Ny + 1):
-                    y = self.y_min + j * self.incr[1]
-                    for i in range(1, self.Nx + 1):
-                        x = self.x_min + i * self.incr[0]
-                        if self.figure.isincheck(Point(x, y, z)):
+                z = self.z_min + k * incr[2]
+                for j in range(1, self.Ny - 1):
+                    y = self.y_min + j * incr[1]
+                    for i in range(1, self.Nx - 1):
+                        x = self.x_min + i * incr[0]
+                        if figure.isincheck(Point(x, y, z)):
                             self.nums[0] += 1
                             self.nodes_to_write[0].append((i, j, k))
-                        elif self.figure.isbordercheck(Point(x, y, z)):
+                        elif figure.isbordercheck(Point(x, y, z)):
                             self.nums[1] += 1
                             self.nodes_to_write[1].append((i, j, k))
                         else:
-                            inside_out_nodes += 1
-            print('Не граничных узлов внутри поверхности :', inside_out_nodes)
-            sum1 = (self.Nx + 2) * (self.Ny + 2) * (self.Nz + 2)
-            sum2 = sum(self.nums) + inside_out_nodes
-            print(f'Проверка \"целостности\": \n'
-                  f'{self.Nx + 2} * {self.Ny + 2} * {self.Nz + 2} = {sum1}\n'
-                  f'{self.nums[0]} + {inside_out_nodes} + {self.nums[1]} + {self.nums[2]} + {self.nums[3]}'
-                  f' + {self.nums[4]} + {self.nums[5]} + {self.nums[6]} + {self.nums[7]} = {sum2}')
-        elif self.lattice_num == 0:
-
+                            inside_out_nds += 1
+            print('Не граничных узлов внутри поверхности :', inside_out_nds)
+            sum1 = self.Nx * self.Ny * self.Nz
+            sum2 = sum(self.nums) + inside_out_nds
+            print(f'____________________________ПРОВЕРКА \"ЦЕЛОСТНОСТИ\" сетка №{self.lattice_num}___________________________\n'
+                  f'узлов посчитано: {self.Nx} * {self.Ny} * {self.Nz} = {sum1}\n'
+                  f'узлов создано: {self.nums[0]} + {inside_out_nds} + {self.nums[1]} + {self.nums[2]} + {self.nums[3]}'
+                  f' + {self.nums[4]} + {self.nums[5]} + {self.nums[6]} + {self.nums[7]} = {sum2}\n'
+                  f'......................................................................................')
+        if self.lattice_num == 0:
             # генерируем узлы границ расчётных областей (внешние узлы на границе с расчётной областью)
-            for k in range(self.Nz + 2):
-                for j in range(self.Ny + 2):
+            for k in range(self.Nz):
+                for j in range(self.Ny):
                     self.nodes_to_write[2].append((0, j, k))
-                    self.nodes_to_write[3].append((self.Nx + 1, j, k))
-            for k in range(self.Nz + 2):
-                for i in range(1, self.Nx + 1):
+                    self.nodes_to_write[3].append((self.Nx - 1, j, k))
+            for k in range(self.Nz):
+                for i in range(1, self.Nx - 1):
                     self.nodes_to_write[4].append((i, 0, k))
-                    self.nodes_to_write[5].append((i, self.Ny + 1, k))
-            for j in range(1, self.Ny + 1):
-                for i in range(1, self.Nx + 1):
+                    self.nodes_to_write[5].append((i, self.Ny - 1, k))
+            for j in range(1, self.Ny - 1):
+                for i in range(1, self.Nx - 1):
                     self.nodes_to_write[6].append((i, j, 0))
-                    self.nodes_to_write[7].append((i, j, self.Nz + 1))
+                    self.nodes_to_write[7].append((i, j, self.Nz - 1))
 
     def create_outfile(self, j: int):
         """Вызываем все функции, делаем вычисления и записываем в файл"""
         try:
-            with open(self.path_out[:-4] + f'_{j}.txt', "w") as file:
+            with open(path_out[:-4] + f'_{j}.txt', "w") as file:
                 file.write(
                     f'{self.x_min};{self.y_min};{self.z_min}\n')  # Координаты левого нижнего узла решётки - граничного
                 # внешнего узла за пределами расчётной области (координаты узла по каждому направлению Ox, Oy, Oz)
                 # координаты внутренних узлов на 1 шаг ближе к центру по соответствующим координатам и находятся
                 # скраю расчетной области
 
-                file.write(f'{self.incr[0]};{self.incr[1]};{self.incr[2]}\n')  # шаг решётки по каждому
+                file.write(f'{incr[0]};{incr[1]};{incr[2]}\n')  # шаг решётки по каждому
                 # направлению
-                file.write(f'{self.Nx + 2};{self.Ny + 2};{self.Nz + 2}\n')  # общее количество узлов по каждой оси
+                file.write(f'{self.Nx};{self.Ny};{self.Nz}\n')  # общее количество узлов по каждой оси
 
                 # Количество внутренних узлов, и далее через ; количество узлов
                 # для каждой из границ расчётной области. Сначала идут граничные узлы вдоль поверхности (они являются
@@ -262,37 +197,35 @@ class Lattice:
                 #
                 #     Идентификатор узла определяется id = i + (j + k * Ny) * Nx,
                 #     сначала список узлов внутренних, потом по очереди всех границ
+                counter = 0
                 for n in range(8):
                     # сначала для внутренних узлов считаем и записываем (n=0), затем для граничных узлов
                     # поверхности (n=1), затем для границ расчётной области (n > 1):
                     for i, j, k in self.nodes_to_write[n]:
                         id_ = i + (j + k * self.Ny) * self.Nx
                         file.write(f'{id_};{i};{j};{k}')
-                        x = self.x_min + i * self.incr[0]
-                        y = self.y_min + j * self.incr[1]
-                        z = self.z_min + k * self.incr[2]
+                        x = self.x_min + i * incr[0]
+                        y = self.y_min + j * incr[1]
+                        z = self.z_min + k * incr[2]
                         # 26 * расстояний по 26 заданным направлениям:
-                        for vector in self.BASIS:
-                            file.write(f';{self.figure.nearbordercheck(Point(x, y, z), vector)}')
+                        for vector in basis:
+                            file.write(f';{figure.nearbordercheck(Point(x, y, z), vector)}')
                         # вектор нормали к ближайшей границе (единичный)
                         # и расстояние до ближайшей границы (по вектору нормали):
-                        normal, distance = self.figure.print_normal_and_distance(Point(x, y, z))
+                        normal, distance = figure.print_normal_and_distance(Point(x, y, z))
                         file.write(f';{normal.x};{normal.y};{normal.z};{distance}')
                         file.write(f'\n')
+                        counter += 1
+                print(f'Записалось узлов в выходном файле:  {counter + 4} - 4 = {counter}\n'
+                      f'Должно совпасть с суммой узлов без \"не граничных внутри поверхности\": {sum(self.nums)}\n'
+                      f'______________________________________________________________________________________')
         except Exception as error:
             print(f'Ошибка при создании выходного файла:\n{error}')
 
-    def lattice_compiling(self):  # функция запускает всё необходимое для обработки данных и генерации выходного файла
-        self.get_input()
-        for i in range(self.nested_lattice_quantity + 1):
-            self.lattice_num = i
-            self.lattice_generator()
-            self.create_outfile(i)
-
 
 class Figure:
-    def __init__(self, lattice: Lattice = None):
-        self.lattice = lattice
+    def __init__(self):
+        pass
 
     def isincheck(self, *args):
         raise NotImplementedError("В дочернем классе должен быть"
@@ -303,18 +236,18 @@ class Figure:
         """Определаяем, граничит ли внешний узел с границей поверхности
         (а значит с внутренним узлом) хотя бы по одному базисному вектору в пределах шага решётки;
         True, если узел граничит с поверхностью"""
-        for v in self.lattice.BASIS:
-            ans = self.isincheck(Point(node.x + v.x * self.lattice.incr[0],
-                                       node.y + v.y * self.lattice.incr[1],
-                                       node.z + v.z * self.lattice.incr[2]))
+        for v in basis:
+            ans = self.isincheck(Point(node.x + v.x * incr[0],
+                                       node.y + v.y * incr[1],
+                                       node.z + v.z * incr[2]))
             if ans:
                 return True
         return False
 
 
 class Sphere(Figure):
-    def __init__(self, centre=Point(0, 0, 0), size=None, lattice: Lattice = None):
-        super().__init__(lattice)
+    def __init__(self, centre=Point(0, 0, 0), size=None):
+        super().__init__()
         self.centre = centre
         self.size = size
 
@@ -336,9 +269,9 @@ class Sphere(Figure):
         if (node - self.centre).square_of_norm() == self.size ** 2:
             return 0
         ans1 = self.isincheck(node)
-        ans2 = self.isincheck(Point(node.x + v.x * self.lattice.incr[0],
-                                    node.y + v.y * self.lattice.incr[1],
-                                    node.z + v.z * self.lattice.incr[2]))
+        ans2 = self.isincheck(Point(node.x + v.x * incr[0],
+                                    node.y + v.y * incr[1],
+                                    node.z + v.z * incr[2]))
         if ans1 == ans2:  # если изначальная точка и ближайшая по базисному
             # вектору - по одну сторону границы, то возвращаем 0
             return 0
@@ -378,8 +311,8 @@ class Sphere(Figure):
 
 
 class Ellipsoid(Figure):
-    def __init__(self, centre=Point(0, 0, 0), size: tuple = (1, 1, 1), lattice: Lattice = None):
-        super().__init__(lattice)
+    def __init__(self, centre=Point(0, 0, 0), size: tuple = (1, 1, 1)):
+        super().__init__()
         self.centre = centre
         self.size = size
 
@@ -464,8 +397,8 @@ class Ellipsoid(Figure):
         if (Decimal(delta.x) ** 2 / a ** 2 + Decimal(delta.y) ** 2 / b ** 2 + Decimal(
                 delta.z) ** 2 / c ** 2) == Decimal('1'):
             return 0
-        p = Point(node.x + v.x * self.lattice.incr[0], node.y + v.y * self.lattice.incr[1],
-                  node.z + v.z * self.lattice.incr[2])
+        p = Point(node.x + v.x * incr[0], node.y + v.y * incr[1],
+                  node.z + v.z * incr[2])
         ans1 = self.isincheck(node)
         ans2 = self.isincheck(p)
         if ans1 == ans2:  # если изначальная точка и ближайшая по базисному
@@ -520,8 +453,8 @@ class Ellipsoid(Figure):
 
 
 class Parallelepiped(Figure):
-    def __init__(self, centre=Point(0, 0, 0), size: tuple = (1, 1, 1), lattice: Lattice = None):
-        super().__init__(lattice)
+    def __init__(self, centre=Point(0, 0, 0), size: tuple = (1, 1, 1)):
+        super().__init__()
         self.centre = centre
         self.size = size
 
@@ -556,9 +489,9 @@ class Parallelepiped(Figure):
             return 0
 
         ans1 = self.isincheck(node)
-        ans2 = self.isincheck(Point(node.x + v.x * self.lattice.incr[0],
-                                    node.y + v.y * self.lattice.incr[1],
-                                    node.z + v.z * self.lattice.incr[2]))
+        ans2 = self.isincheck(Point(node.x + v.x * incr[0],
+                                    node.y + v.y * incr[1],
+                                    node.z + v.z * incr[2]))
         if ans1 == ans2:  # если изначальная точка и ближайшая по базисному
             # вектору - по одну сторону границы, то возвращаем 0
             return 0
@@ -571,7 +504,7 @@ class Parallelepiped(Figure):
                         abs(abs(delta.z) - c / 2)]
         ans = [False for _ in range(3)]
         for n in range(3):
-            if node_delta_a[n] <= self.lattice.incr[n]:
+            if node_delta_a[n] <= incr[n]:
                 numoftrue += 1
                 ans[n] = True
         # вычисляем расстояние до параллелограмма для разных вариантов расположения узла:
@@ -588,8 +521,7 @@ class Parallelepiped(Figure):
                     # смотрят от этой точки в сторону границы параллелограмма по этой оси (ближайшей в пределах шага):
                     dist_by_axis = []
                     for n, param in enumerate(delta.__dict__.keys()):
-                        check = ans[n] * (self.lattice.sign_of_num(v.__dict__[param]) ==
-                                          self.lattice.sign_of_num(delta.__dict__[param]))
+                        check = ans[n] * (sign_of_num(v.__dict__[param]) == sign_of_num(delta.__dict__[param]))
                         if check:
                             dist_by_axis.append(node_delta_a[n])
                     xoryorz_dist = dist_by_axis[0] if len(dist_by_axis) == 1 else min(dist_by_axis)
@@ -601,8 +533,7 @@ class Parallelepiped(Figure):
                     # смотрят от этой точки в сторону границы параллелограмма по этой оси (ближайшей в пределах шага):
                     dist_by_axis = []
                     for n, param in enumerate(delta.__dict__.keys()):
-                        check = self.lattice.sign_of_num(v.__dict__[param]) == self.lattice.sign_of_num(
-                            delta.__dict__[param])
+                        check = sign_of_num(v.__dict__[param]) == sign_of_num(delta.__dict__[param])
                         if check:
                             dist_by_axis.append(node_delta_a[n])
                     xoryorz_dist = dist_by_axis[0] if len(dist_by_axis) == 1 else min(dist_by_axis)
@@ -651,23 +582,23 @@ class Parallelepiped(Figure):
                 elif ans4 and not ans5 and not ans6:
                     length = ((abs(dy) - b / 2) ** 2 + (abs(dz) - c / 2) ** 2) ** 0.5
                     norm_x = 0
-                    norm_y = (dy - self.lattice.sign_of_num(dy) * b / 2) / length
-                    norm_z = (dz - self.lattice.sign_of_num(dz) * c / 2) / length
+                    norm_y = (dy - sign_of_num(dy) * b / 2) / length
+                    norm_z = (dz - sign_of_num(dz) * c / 2) / length
                 elif ans5 and not ans4 and not ans6:
                     length = ((abs(dx) - a / 2) ** 2 + (abs(dz) - c / 2) ** 2) ** 0.5
-                    norm_x = (dx - self.lattice.sign_of_num(dx) * a / 2) / length
+                    norm_x = (dx - sign_of_num(dx) * a / 2) / length
                     norm_y = 0
-                    norm_z = (dz - self.lattice.sign_of_num(dz) * c / 2) / length
+                    norm_z = (dz - sign_of_num(dz) * c / 2) / length
                 elif ans6 and not ans4 and not ans5:
                     length = ((abs(dx) - a / 2) ** 2 + (abs(dy) - b / 2) ** 2) ** 0.5
-                    norm_x = (dx - self.lattice.sign_of_num(dx) * a / 2) / length
-                    norm_y = (dy - self.lattice.sign_of_num(dy) * b / 2) / length
+                    norm_x = (dx - sign_of_num(dx) * a / 2) / length
+                    norm_y = (dy - sign_of_num(dy) * b / 2) / length
                     norm_z = 0
                 elif not ans4 and not ans5 and not ans6:
                     length = ((abs(dx) - a / 2) ** 2 + (abs(dy) - b / 2) ** 2 + (abs(dz) - c / 2) ** 2) ** 0.5
-                    norm_x = (dx - self.lattice.sign_of_num(dx) * a / 2) / length
-                    norm_y = (dy - self.lattice.sign_of_num(dy) * b / 2) / length
-                    norm_z = (dz - self.lattice.sign_of_num(dz) * c / 2) / length
+                    norm_x = (dx - sign_of_num(dx) * a / 2) / length
+                    norm_y = (dy - sign_of_num(dy) * b / 2) / length
+                    norm_z = (dz - sign_of_num(dz) * c / 2) / length
                 # возвращаем вектор нормали и расстояние:
                 return Vector(norm_x, norm_y, norm_z), length
             else:  # граничные узлы (внутри параллелограмма)
@@ -699,5 +630,80 @@ class Parallelepiped(Figure):
                 return Vector(norm_x, norm_y, norm_z), length
 
 
-good_lattice = Lattice()
-good_lattice.lattice_compiling()
+def sign_of_num(x: float):
+    return 0 if abs(x) == 0 else int(x / abs(x))
+
+
+def get_input():
+    """Достаём все параметры из входного файла"""
+    try:
+        with open(path_in, encoding='utf-8') as file:
+            lines = file.readlines()
+            minmax_crd = tuple(map(float, lines[0].split(';')))  # крайние
+            # координаты (мин, макс) области вычислений по осям координат
+            print('Крайние координаты (мин, макс) области вычислений: ', minmax_crd)
+            incrmnt = tuple(map(float, lines[1].split(';')))  # шаги решётки по осям координат
+            print('Шаги решётки по осям координат: ', incrmnt)
+            border_type = int(lines[2].strip())  # тип фигуры для задания границы
+            # вытаскиваем параметры для каждого типа фигуры
+            t = tuple(map(float, lines[3].split(';')))
+            # вытаскиваем параметры для вложенных решёток
+            nstd_lttc_qntt, nstd_lttc_wdth = map(int, lines[4].split(';'))
+            match border_type:
+                case 0:  # произвольная граница с заданием по точкам/аналитически
+                    pass
+                case 1:  # сфера
+                    figure_centre, figure_size = t[:3], t[-1] / 2  # координаты центра сферы
+                    # и радиус сферы
+                    print(f'СФЕРА с центром {figure_centre} и радиусом {figure_size}')
+                    fgr = Sphere(Point(figure_centre), figure_size)
+
+                case 2:  # эллипсоид
+                    figure_centre, figure_size = t[:3], tuple(
+                        n / 2 for n in t[3::])  # координаты центра эллипсоида
+                    # и полуосей a, b, c
+                    print(
+                        f'ЭЛЛИПСОИД с центром {figure_centre} и полуосями {figure_size[0]}, {figure_size[1]},'
+                        f' {figure_size[2]}')
+                    fgr = Ellipsoid(Point(figure_centre), figure_size)
+                case 3:  # куб
+                    figure_centre, figure_size = t[:3], t[-1]  # координаты центра куба
+                    # и длина ребра куба
+                    print(f'КУБ с центром {figure_centre} и ребром {figure_size}')
+                    fgr = Parallelepiped(Point(figure_centre), (figure_size, figure_size, figure_size))
+                case 4:  # параллелепипед
+                    figure_centre, figure_size = t[:3], tuple(t[3::])  # координаты центра параллелепипеда
+                    # и длины рёбер a, b, c
+                    print(
+                        f'ПАРАЛЛЕЛЕПИПЕД с центром {figure_centre} и рёбрами {figure_size[0]}, {figure_size[1]},'
+                        f' {figure_size[2]}')
+                    fgr = Parallelepiped(Point(figure_centre), figure_size)
+    except Exception as error:
+        print(f'Неверный формат входного файла:\n{error}')
+    return fgr, minmax_crd, incrmnt, nstd_lttc_qntt, nstd_lttc_wdth
+
+
+def lattice_compiling():
+    """Функция запускает всё необходимое для обработки данных и генерации выходного файла"""
+    lattices = []
+    for i in range(nested_lattice_quantity + 1):
+        lattices.append(Lattice())
+        lattices[i].lattice_num = i
+        lattices[i].lattice_generator()
+        lattices[i].create_outfile(i)
+        # lattice = Lattice()
+        # lattice.lattice_num = i
+        # lattice.lattice_generator()
+        # lattice.create_outfile(i)
+
+
+basis = tuple(Vector(v[0], v[1], v[2]) for v in
+              ((1, 0, 0), (-1, 0, 0), (0, 1, 0), (0, -1, 0), (0, 0, 1), (0, 0, -1), (1, 1, 0), (-1, 1, 0),
+               (1, -1, 0),
+               (-1, -1, 0), (1, 0, 1), (-1, 0, 1), (1, 0, -1), (-1, 0, -1), (0, 1, 1), (0, -1, 1), (0, 1, -1),
+               (0, -1, -1), (1, 1, 1), (-1, 1, 1), (1, -1, 1), (-1, -1, 1), (1, 1, -1), (-1, 1, -1), (1, -1, -1),
+               (-1, -1, -1)))
+path_in = 'input.txt'
+path_out = 'output/output.txt'
+figure, minmax_coord, incr, nested_lattice_quantity, nested_lattice_width = get_input()
+lattice_compiling()
