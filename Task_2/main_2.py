@@ -151,9 +151,7 @@ class Lattice:
                 f'узлов создано: {self.nums[0]} + {inside_out_nds} + {self.nums[1]} + {self.nums[2]} + {self.nums[3]}'
                 f' + {self.nums[4]} + {self.nums[5]} + {self.nums[6]} + {self.nums[7]} = {sum2}\n'
                 f'............................................................................................')
-        else:
-            pass
-        if self.lattice_num == 0:
+
             # генерируем узлы границ расчётных областей (внешние узлы на границе с расчётной областью)
             for k in range(self.Nz):
                 for j in range(self.Ny):
@@ -168,8 +166,63 @@ class Lattice:
                     self.nodes_to_write[6].append((i, j, 0))
                     self.nodes_to_write[7].append((i, j, self.Nz - 1))
 
+        else:
+            step = [incr[i] / (2 ** (nested_lattice_quantity - self.lattice_num)) for i in range(3)]
+            if self.lattice_num == 0:
+                self.num_of_nodes = []
+                for n in range(6):  # вычисляем и складываем количество узлов
+                    # по разные стороны центра фигуры границы, для каждой оси.
+                    # На данный момент узел решётки совпадает с центром фигуры границы
+                    # и откладывается от него до границ данного уровня решётки.
+                    centre = (figure.centre.x, figure.centre.y, figure.centre.z)
+                    self.num_of_nodes.append(int(abs((minmax_coord[n] - centre[n // 2]) / step[n // 2])))
+                self.Nx = self.num_of_nodes[0] + self.num_of_nodes[1] + 1 + 2  # + 2 это на внешние границы добавили
+                self.Ny = self.num_of_nodes[2] + self.num_of_nodes[3] + 1 + 2  # + 2 это на внешние границы добавили
+                self.Nz = self.num_of_nodes[4] + self.num_of_nodes[5] + 1 + 2  # + 2 это на внешние границы добавили
+
+                # Координаты левого нижнего узла решётки - граничного
+                # внешнего узла за пределами расчётной области (координаты узла по каждому направлению Ox, Oy, Oz)
+                # координаты внутренних узлов на 1 шаг ближе к центру по соответствующим координатам и находятся
+                # скраю расчетной области
+                self.x_min = figure.centre.x - (self.num_of_nodes[0] + 1) * incr[0]
+                self.y_min = figure.centre.y - (self.num_of_nodes[2] + 1) * incr[1]
+                self.z_min = figure.centre.z - (self.num_of_nodes[4] + 1) * incr[2]
+
+                # В этом блоке отсекаются все внешние узлы и сохраняются внешние граничные узлы внутри поверхности,
+                # в виде списка кортежей их координат. И распределяются по этим группам.
+                self.nums = [0, 0, self.Ny * self.Nz, self.Ny * self.Nz, (self.Nx - 2) * self.Nz,
+                             (self.Nx - 2) * self.Nz, (self.Nx - 2) * (self.Ny - 2), (self.Nx - 2) * (self.Ny - 2)]
+                self.nodes_to_write = [[] for _ in range(8)]
+                inside_out_nds = 0
+                for k in range(1, self.Nz - 1):  # генерируем узлы в расчётной области, сюда входит и то, что внутри
+                    # поверхности. Оно в процессе отсеивается, или идёт в границу расчётной области у поверхности.
+                    # убираем из циклов крайние значения - узлы внешних границ решётки,т.к. они отдельно ниже генерируются
+                    z = self.z_min + k * incr[2]
+                    for j in range(1, self.Ny - 1):
+                        y = self.y_min + j * incr[1]
+                        for i in range(1, self.Nx - 1):
+                            x = self.x_min + i * incr[0]
+                            if figure.isincheck(Point(x, y, z)):
+                                self.nums[0] += 1
+                                self.nodes_to_write[0].append((i, j, k))
+                            elif figure.isbordercheck(Point(x, y, z)):
+                                self.nums[1] += 1
+                                self.nodes_to_write[1].append((i, j, k))
+                            else:
+                                inside_out_nds += 1
+                print('Не граничных узлов внутри поверхности :', inside_out_nds)
+                sum1 = self.Nx * self.Ny * self.Nz
+                sum2 = sum(self.nums) + inside_out_nds
+                print(
+                    f'_______________________________ПРОВЕРКА \"ЦЕЛОСТНОСТИ\" сетка №{self.lattice_num}'
+                    f'______________________________\n'
+                    f'узлов посчитано: {self.Nx} * {self.Ny} * {self.Nz} = {sum1}\n'
+                    f'узлов создано: {self.nums[0]} + {inside_out_nds} + {self.nums[1]} + {self.nums[2]} + {self.nums[3]}'
+                    f' + {self.nums[4]} + {self.nums[5]} + {self.nums[6]} + {self.nums[7]} = {sum2}\n'
+                    f'............................................................................................')
+
         if self.lattice_num < nested_lattice_quantity:
-            lattices_.append(lattices_[-1])
+            lattices_.append(Lattice())
 
     def create_outfile(self, j: int):
         """Вызываем все функции, делаем вычисления и записываем в файл"""
